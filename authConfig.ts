@@ -1,22 +1,15 @@
 import { Configuration, LogLevel } from "@azure/msal-browser";
 
-/**
- * Konfiguracja MSAL, która dynamicznie pobiera dane z .env.local
- */
+const AZURE_LOGIN_URL = "https://login.microsoftonline.com";
+
 export const msalConfig: Configuration = {
   auth: {
-    // Pobiera Client ID z .env.local
     clientId: process.env.NEXT_PUBLIC_MSAL_CLIENT_ID || "",
-
-    // Buduje adres authority na podstawie Twojego Tenant ID
-    authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_MSAL_TENANT_ID}`,
-
-    // Adres, na który Microsoft przekieruje po zalogowaniu
+    authority: `${AZURE_LOGIN_URL}/${process.env.NEXT_PUBLIC_MSAL_TENANT_ID}`,
     redirectUri:
       process.env.NEXT_PUBLIC_MSAL_REDIRECT_URI || "http://localhost:3000",
   },
   cache: {
-    // sessionStorage jest bezpieczniejsze dla aplikacji typu SPA
     cacheLocation: "sessionStorage",
   },
   system: {
@@ -42,10 +35,6 @@ export const msalConfig: Configuration = {
   },
 };
 
-/**
- * Zakresy (Scopes), o które prosimy przy logowaniu.
- * "User.Read" pozwala na pobranie podstawowego profilu użytkownika (imię, nazwisko, email).
- */
 export const loginRequest = {
   scopes: ["api://d5614add-3e17-42b6-a294-fc218d0f61e6/access_as_user"],
 };
