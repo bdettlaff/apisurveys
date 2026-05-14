@@ -1,15 +1,27 @@
-import Link from "next/link";
+"use client";
+
+import { useEffect } from "react";
+import { useIsAuthenticated } from "@azure/msal-react";
+import { useRouter } from "next/navigation";
+import { Hero } from "./components/Hero";
+import { Navbar } from "./components/Navbar";
+import { Background } from "./components/Background";
 
 export default function Home() {
+  const isAuthenticated = useIsAuthenticated();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.push("/dashboard");
+    }
+  }, [isAuthenticated, router]);
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <h1 className="text-2xl font-bold mb-4">Witaj w aplikacji</h1>
-      <Link
-        href="/login"
-        className="px-6 py-2 bg-zinc-900 text-white rounded-lg"
-      >
-        Przejdź do logowania
-      </Link>
-    </div>
+    <main className="relative min-h-screen">
+      <Background />
+      <Navbar />
+      <Hero />
+    </main>
   );
 }

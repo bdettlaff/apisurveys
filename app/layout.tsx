@@ -5,7 +5,6 @@ import { MsalProvider } from "@azure/msal-react";
 import { msalConfig } from "../authConfig";
 import "./globals.css";
 
-// Inicjalizacja instancji poza komponentem
 const msalInstance = new PublicClientApplication(msalConfig);
 
 export default function RootLayout({
