@@ -1,8 +1,8 @@
 "use client";
 
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import { TestBackendBtn } from "../components/TestBackendBtn";
-import { Navbar } from "../components/Navbar"; // Poprawiony import
+import { TestBackendBtn } from "../components/TestBackendBtn/TestBackendBtn";
+import { Navbar } from "../components/Navbar/Navbar";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 

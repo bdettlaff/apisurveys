@@ -53,7 +53,7 @@ export const Hero = () => {
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth="2"
+              strokeWidth={2}
               d="M13 7l5 5m0 0l-5 5m5-5H6"
             />
           </svg>

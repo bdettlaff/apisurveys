@@ -1,9 +1,9 @@
 "use client";
 
 import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "../../authConfig";
+import { loginRequest } from "@/authConfig";
 import { useState } from "react";
-import { API_CONFIG } from "../../lib/api";
+import { API_CONFIG } from "@/lib/api";
 
 export const TestBackendBtn = () => {
   const { instance, accounts } = useMsal();

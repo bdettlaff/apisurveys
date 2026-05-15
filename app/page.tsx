@@ -3,9 +3,9 @@
 import { useEffect } from "react";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useRouter } from "next/navigation";
-import { Hero } from "./components/Hero";
-import { Navbar } from "./components/Navbar";
-import { Background } from "./components/Background";
+import { Hero } from "./components/Hero/Hero";
+import { Navbar } from "./components/Navbar/Navbar";
+import { Background } from "./components/Background/Background";
 
 export default function Home() {
   const isAuthenticated = useIsAuthenticated();
