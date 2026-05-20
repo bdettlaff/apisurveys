@@ -4,6 +4,7 @@ import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { loginRequest } from "@/authConfig";
 import { InteractionStatus } from "@azure/msal-browser";
 import { Logo } from "../Logo/Logo";
+import Link from "next/link";
 
 export const Navbar = () => {
   const { instance, inProgress } = useMsal();
@@ -26,18 +27,31 @@ export const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100">
       <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-        {/* Lewa strona: Logo i Branding */}
-        <div className="flex items-center gap-3 min-w-0">
-          <Logo width={40} height={40} />
-          <div className="flex flex-col leading-none min-w-0">
-            <span className="text-sm md:text-lg font-black tracking-tight text-zinc-900 uppercase">
-              QUED
-            </span>
-            <span className="text-[10px] md:text-xs font-bold text-alo-red tracking-[0.2em] uppercase">
-              Edukacja
-            </span>
+        <div className="flex items-center gap-8 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <Logo width={40} height={40} />
+            <div className="flex flex-col leading-none min-w-0">
+              <span className="text-sm md:text-lg font-black tracking-tight text-zinc-900 uppercase">
+                QUED
+              </span>
+              <span className="text-[10px] md:text-xs font-bold text-alo-red tracking-[0.2em] uppercase">
+                Edukacja
+              </span>
+            </div>
           </div>
+
+          {isAuthenticated && (
+            <div className="hidden md:flex items-center gap-6 border-l border-zinc-200 pl-6">
+              <Link
+                href="/dashboard/survey-results"
+                className="text-sm font-bold text-zinc-600 hover:text-indigo-600 transition-colors"
+              >
+                Poglądowe wyniki ankiet
+              </Link>
+            </div>
+          )}
         </div>
+
         <div className="flex items-center gap-4">
           {!isAuthenticated ? (
             <button

@@ -2,17 +2,28 @@
 
 import { useMsal } from "@azure/msal-react";
 import { loginRequest } from "@/authConfig";
-import { InteractionStatus } from "@azure/msal-browser";
+import { InteractionStatus, AuthError } from "@azure/msal-browser";
 
 export const Hero = () => {
   const { instance, inProgress } = useMsal();
-  const handleLogin = () => {
-    if (inProgress === InteractionStatus.None) {
-      instance.loginRedirect(loginRequest).catch((e) => {
-        console.error("Błąd logowania bezpośredniego:", e);
-      });
+
+  const handleLogin = async () => {
+    if (inProgress !== InteractionStatus.None) {
+      return;
+    }
+
+    try {
+      await instance.loginRedirect(loginRequest);
+    } catch (e) {
+      const error = e as AuthError;
+      if (error.errorCode === "interaction_in_progress") {
+        console.warn("Logowanie już trwa w innej karcie lub procesie.");
+      } else {
+        console.error("Błąd logowania:", error);
+      }
     }
   };
+
   return (
     <section className="flex flex-col items-center justify-center pt-24 md:pt-32 px-6 text-center">
       <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-tau-yellow/10 border border-tau-yellow/20 mb-8">
@@ -38,7 +49,7 @@ export const Hero = () => {
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         <button
           onClick={handleLogin}
-          disabled={inProgress !== InteractionStatus.None}
+          disabled={inProgress !== InteractionStatus.None || !instance}
           className="group px-8 py-4 bg-tau-dark text-white rounded-2xl font-bold text-lg transition-all hover:bg-alo-red hover:shadow-xl hover:shadow-alo-red/20 active:scale-95 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {inProgress !== InteractionStatus.None
