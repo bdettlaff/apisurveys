@@ -8,12 +8,20 @@ import { useEffect, useState } from "react";
 
 import SurveyForm from "../components/Surveys/SurveyForm";
 
+type SchoolClass = {
+  id: number;
+  name: string;
+};
+
 export default function DashboardPage() {
   const { accounts } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
-  
-  const [classSlug, setClassSlug] = useState<string>("");
+
+  const [classId, setClassId] = useState<number | null>(null);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [classesLoading, setClassesLoading] = useState<boolean>(false);
+  const [classesError, setClassesError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -21,13 +29,40 @@ export default function DashboardPage() {
     }
   }, [isAuthenticated, router]);
 
-  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = e.target.value;
-    if (selectedValue) {
-      setClassSlug(`${selectedValue}-2026`);
-    } else {
-      setClassSlug("");
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    async function fetchClasses() {
+      try {
+        setClassesLoading(true);
+        setClassesError(null);
+
+        // WAŻNE: bez końcowego slasha
+        const res = await fetch("http://localhost:8080/api/classes");
+        if (!res.ok) {
+          throw new Error(`Nie udało się pobrać klas (status ${res.status}).`);
+        }
+
+        const data: SchoolClass[] = await res.json();
+        setClasses(data);
+
+        // jeśli było wybrane ID, ale nie istnieje w nowej liście — wyczyść
+        setClassId((prev) => (prev !== null && data.some((c) => c.id === prev) ? prev : null));
+      } catch (e: any) {
+        setClasses([]);
+        setClassId(null);
+        setClassesError(e?.message ?? "Nie udało się pobrać listy klas");
+      } finally {
+        setClassesLoading(false);
+      }
     }
+
+    fetchClasses();
+  }, [isAuthenticated]);
+
+  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const v = e.target.value;
+    setClassId(v ? Number(v) : null);
   };
 
   if (!isAuthenticated) return null;
@@ -45,53 +80,47 @@ export default function DashboardPage() {
           </p>
 
           <div className="w-full max-w-xs mb-8 flex flex-col items-center">
-            <label htmlFor="class-select" className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2">
-              Wybierz swoją klasę, aby załadować ankiety:
+            <label
+              htmlFor="class-select"
+              className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2"
+            >
+              Wybierz swoją klasę, aby wyświetlić nauczycieli:
             </label>
+
             <select
               id="class-select"
               onChange={handleClassChange}
+              value={classId ?? ""}
+              disabled={classesLoading || !!classesError}
               className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-xl text-zinc-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer text-sm shadow-sm"
             >
               <option value="">-- Wybierz klasę --</option>
-              <option value="1tl">1TL TAU</option>
-              <option value="1tp">1TP TAU</option>
-              <option value="1tp-e">1TP-E TAU</option>
-              <option value="1a">1a ALO</option>
-              <option value="2tl">2TL TAU</option>
-              <option value="2tp">2TP TAU</option>
-              <option value="2a">2a ALO</option>
-              <option value="3tl">3TL TAU</option>
-              <option value="3tp-1">3TP GR-1 TAU</option>
-              <option value="3tp-2">3TP GR-2 TAU</option>
-              <option value="3tp-e">3TP-E TAU</option>
-              <option value="3a">3a ALO</option>
-              <option value="4tl">4TL TAU</option>  
-              <option value="4tp">4TP TAU</option>
-              <option value="4tp-e">4TP-E TAU</option>
-              <option value="4a">4a ALO</option>
-              <option value="5tl">5TL TAU</option>
-              <option value="5tp">5TP TAU</option>
-              <option value="5tp-e">5TP-E TAU</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
+
+            {classesLoading && (
+              <div className="mt-2 text-xs text-zinc-400">Ładowanie listy klas...</div>
+            )}
+            {classesError && (
+              <div className="mt-2 text-xs text-red-500">Błąd: {classesError}</div>
+            )}
           </div>
 
           <div className="w-full flex justify-center pt-4 border-t border-zinc-100">
             <TestBackendBtn />
           </div>
 
-          {classSlug ? (
+          {classId !== null ? (
             <div className="w-full mt-8 pt-8 border-t border-zinc-100">
-              <div className="mb-4 text-center">
-                <span className="text-xs bg-blue-50 text-blue-600 font-mono font-bold px-3 py-1 rounded-full border border-blue-100">
-                  Wczytany slug: {classSlug}
-                </span>
-              </div>
-              <SurveyForm slug={classSlug} />
+              <SurveyForm classId={classId} />
             </div>
           ) : (
             <div className="w-full mt-8 pt-8 border-t border-zinc-100 text-center text-sm text-zinc-400 italic">
-              Wybierz klasę powyżej, aby wyświetlić przypisane bloki oceniania.
+              Wybierz klasę powyżej, aby wyświetlić listę nauczycieli.
             </div>
           )}
         </div>
