@@ -92,7 +92,6 @@ export default function DashboardPage() {
         setClassesLoading(true);
         setClassesError(null);
 
-        // WAŻNE: bez końcowego slasha
         const res = await fetch("http://localhost:8080/api/classes");
         if (!res.ok) {
           throw new Error(`Nie udało się pobrać klas (status ${res.status}).`);
@@ -101,7 +100,6 @@ export default function DashboardPage() {
         const data: SchoolClass[] = await res.json();
         setClasses(data);
 
-        // jeśli było wybrane ID, ale nie istnieje w nowej liście — wyczyść
         setClassId((prev) =>
           prev !== null && data.some((c) => c.id === prev) ? prev : null,
         );
