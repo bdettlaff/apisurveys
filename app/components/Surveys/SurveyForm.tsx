@@ -29,7 +29,7 @@ export default function SurveyForm({ classId }: { classId: number }) {
     async function fetchBlocks() {
       setLoading(true);
       setActiveBlock(null);
-      setCompletedBlocks([]);
+      setCompletedBlocks([]); 
       try {
         const res = await fetch(
           `http://localhost:8080/api/classes/${classId}/blocks`,
@@ -55,6 +55,20 @@ export default function SurveyForm({ classId }: { classId: number }) {
 
   if (loading) return <p className="text-center text-zinc-500 text-sm font-medium">Ładowanie...</p>;
   if (blocks.length === 0) return <p className="text-center text-zinc-400 text-sm italic">Brak przypisanych nauczycieli dla tej klasy.</p>;
+
+  if (completedBlocks.length === blocks.length && blocks.length > 0) {
+    return (
+      <div className="w-full text-center py-10 px-6 bg-white border border-zinc-200 rounded-2xl shadow-sm animate-fadeIn">
+        <div className="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
+          ✓
+        </div>
+        <h2 className="text-xl font-black text-zinc-800 tracking-tight">Wszystkie ankiety uzupełnione!</h2>
+        <p className="text-zinc-500 text-sm mt-2 max-w-sm mx-auto font-medium">
+          Dziękujemy za Twój czas. Twoje odpowiedzi pomogą w podnoszeniu jakości nauczania w naszej szkole.
+        </p>
+      </div>
+    );
+  }
 
   if (activeBlock) {
     return (
@@ -119,6 +133,12 @@ export default function SurveyForm({ classId }: { classId: number }) {
 
   return (
     <div className="w-full space-y-3.5">
+      <div className="text-right px-1 mb-1">
+        <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+          Postęp: {completedBlocks.length} / {blocks.length}
+        </span>
+      </div>
+
       {sortedBlocks.map((b) => {
         const isCompleted = completedBlocks.includes(b.id);
 
@@ -136,7 +156,7 @@ export default function SurveyForm({ classId }: { classId: number }) {
               <h4 className={`text-base font-bold tracking-tight transition-colors ${isCompleted ? "text-zinc-500 line-through" : "text-zinc-800 group-hover:text-black"}`}>
                 {b.teacher?.firstName} {b.teacher?.lastName}
               </h4>
-              <p className={`text-xs font-semibold mt-0.5 tracking-wide ${isCompleted ? "text-zinc-400" : "text-zinc-400"}`}>
+              <p className="text-xs text-zinc-400 font-semibold mt-0.5 tracking-wide">
                 {b.subject?.name}
               </p>
               {isCompleted && (
