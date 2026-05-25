@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Navbar } from "../../components/Navbar/Navbar";
 
 type Category = {
   id: number;
@@ -27,30 +29,49 @@ export default function QuestionsPage() {
   const fetchCategories = () => {
     fetch("http://localhost:8080/api/categories")
       .then((res) => res.json())
-      .then((data) => setCategories(data));
+      .then((data) => setCategories(data))
+      .catch((err) => console.error("Błąd pobierania kategorii:", err));
   };
 
   useEffect(() => {
     fetch("http://localhost:8080/api/questions")
       .then((res) => res.json())
-      .then((data) => setQuestions(data));
+      .then((data) => setQuestions(data))
+      .catch((err) => console.error("Błąd pobierania pytań:", err));
     fetchCategories();
   }, []);
 
   const filtered = questions.filter((q) => {
-    const matchSearch = q.content.toLowerCase().includes(search.toLowerCase());
+    const searchLower = search.toLowerCase();
+
+    const matchSearch =
+      q.content || q.id
+        ? q.content.toLowerCase().includes(searchLower) ||
+          q.id.toLowerCase().includes(searchLower)
+        : false;
+
     const matchCategory = filterCategory
       ? q.category?.id === Number(filterCategory)
       : true;
+
     return matchSearch && matchCategory;
   });
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Czy na pewno chcesz usunąć to pytanie?")) return;
-    await fetch(`http://localhost:8080/api/questions/${id}`, {
-      method: "DELETE",
-    });
-    setQuestions(questions.filter((q) => q.id !== id));
+    if (!confirm(`Czy na pewno chcesz usunąć pytanie o kodzie ${id}?`)) return;
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/questions/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+      if (response.ok) {
+        setQuestions(questions.filter((q) => q.id !== id));
+      }
+    } catch (err) {
+      alert("Nie udało się usunąć pytania.");
+    }
   };
 
   const handleAddCategory = async () => {
@@ -58,148 +79,237 @@ export default function QuestionsPage() {
       alert("Wpisz nazwę kategorii!");
       return;
     }
-    await fetch("http://localhost:8080/api/categories", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newCategoryName }),
-    });
-    setNewCategoryName("");
-    fetchCategories();
+    try {
+      const response = await fetch("http://localhost:8080/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategoryName }),
+      });
+      if (response.ok) {
+        setNewCategoryName("");
+        fetchCategories();
+      }
+    } catch (err) {
+      alert("Nie udało się dodać kategorii.");
+    }
   };
 
   const handleDeleteCategory = async (id: number) => {
-    if (!confirm("Usunąć tę kategorię?")) return;
-    await fetch(`http://localhost:8080/api/categories/${id}`, {
-      method: "DELETE",
-    });
-    fetchCategories();
+    if (!confirm("Czy na pewno chcesz usunąć tę kategorię?")) return;
+    try {
+      const response = await fetch(
+        `http://localhost:8080/api/categories/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+      if (response.ok) {
+        fetchCategories();
+      }
+    } catch (err) {
+      alert("Nie udało się usunąć kategorii.");
+    }
   };
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif", color: "#f1f5f9" }}>
-      <h1>Baza Pytań</h1>
+    <div className="min-h-screen bg-zinc-50 antialiased text-zinc-900 selection:bg-zinc-200">
+      <Navbar />
 
-      {/* Sekcja kategorii */}
-      <div style={{ marginBottom: "2rem", padding: "1rem", background: "#1e293b", borderRadius: "8px", border: "1px solid #334155" }}>
-        <h2 style={{ marginTop: 0, fontSize: "1rem", color: "#f1f5f9" }}>Zarządzanie kategoriami</h2>
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.75rem" }}>
-          <input
-            type="text"
-            placeholder="Nazwa nowej kategorii..."
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
-            style={{ padding: "0.4rem 0.75rem", borderRadius: "6px", border: "1px solid #475569", background: "#0f172a", color: "#f1f5f9", fontSize: "0.9rem", width: "250px" }}
-          />
-          <button
-            onClick={handleAddCategory}
-            style={{ padding: "0.4rem 1rem", background: "#22c55e", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}
-          >
-            + Dodaj kategorię
-          </button>
+      <main className="max-w-6xl mx-auto px-4 pt-32 pb-16">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight uppercase text-zinc-900">
+              Baza Pytań
+            </h1>
+            <p className="text-xs font-bold text-zinc-400 tracking-wider uppercase mt-1">
+              Zarządzanie strukturą pytań i kategoriami systemu ewaluacji
+            </p>
+          </div>
+          <Link href="/admin/questions/new" className="shrink-0">
+            <button className="w-full sm:w-auto px-5 py-3 bg-zinc-900 hover:bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl transition-all shadow-md active:scale Murray-95">
+              + Dodaj pytanie
+            </button>
+          </Link>
         </div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-          {categories.map((cat) => (
-            <span key={cat.id} style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", background: "#2563eb", color: "#ffffff", padding: "0.3rem 0.75rem", borderRadius: "999px", fontSize: "0.85rem" }}>
-              {cat.name}
-              <button
-                onClick={() => handleDeleteCategory(cat.id)}
-                style={{ background: "none", border: "none", cursor: "pointer", color: "#fca5a5", fontWeight: "bold", fontSize: "1rem", lineHeight: 1 }}
+
+        <div className="bg-white border border-zinc-200/60 rounded-2xl p-5 md:p-6 shadow-sm mb-6">
+          <h2 className="text-xs font-black tracking-wider text-zinc-400 uppercase mb-4">
+            Zarządzanie kategoriami pytań
+          </h2>
+
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <input
+              type="text"
+              placeholder="Nazwa nowej kategorii..."
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCategory()}
+              className="px-4 py-2.5 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 bg-zinc-50/50 focus:bg-white placeholder:text-zinc-400 w-full sm:max-w-xs"
+            />
+            <button
+              onClick={handleAddCategory}
+              className="px-5 py-2.5 bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-bold uppercase tracking-wider rounded-xl transition-all active:scale-95"
+            >
+              Dodaj
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {categories.length === 0 ? (
+              <span className="text-xs font-medium text-zinc-400">
+                Brak zdefiniowanych kategorii.
+              </span>
+            ) : (
+              categories.map((cat) => (
+                <span
+                  key={cat.id}
+                  className="inline-flex items-center gap-2 bg-zinc-100 border border-zinc-200/60 text-zinc-800 px-3 py-1.5 rounded-full text-xs font-semibold"
+                >
+                  {cat.name}
+                  <button
+                    onClick={() => handleDeleteCategory(cat.id)}
+                    className="text-zinc-400 hover:text-red-500 font-bold text-sm transition-colors leading-none"
+                    title="Usuń kategorię"
+                  >
+                    &times;
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Szukaj pytania po treści lub kodzie (np. A1, Z5)..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-4 pr-10 py-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 bg-white placeholder:text-zinc-400 shadow-sm"
+            />
+          </div>
+
+          <div className="relative">
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="w-full sm:w-56 px-4 py-3 border border-zinc-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 appearance-none cursor-pointer shadow-sm"
+            >
+              <option value="">Wszystkie kategorie</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                viewBox="0 0 24 24"
               >
-                ×
-              </button>
-            </span>
-          ))}
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Przycisk dodaj pytanie */}
-      <a href="/admin/questions/new">
-        <button style={{ marginBottom: "1rem", padding: "0.5rem 1rem", background: "#2563eb", color: "white", border: "none", borderRadius: "6px", cursor: "pointer" }}>
-          + Dodaj pytanie
-        </button>
-      </a>
-
-      {/* Wyszukiwarka i filtr */}
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        <input
-          type="text"
-          placeholder="Szukaj pytania..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ padding: "0.5rem", width: "300px", borderRadius: "6px", border: "1px solid #475569", background: "#0f172a", color: "#f1f5f9" }}
-        />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          style={{ padding: "0.5rem", borderRadius: "6px", border: "1px solid #475569", background: "#0f172a", color: "#f1f5f9" }}
-        >
-          <option value="">Wszystkie kategorie</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* Tabela pytań */}
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr style={{ background: "#1e293b" }}>
-            <th style={th}>Treść pytania</th>
-            <th style={th}>Typ</th>
-            <th style={th}>Kategoria</th>
-            <th style={th}>Moduł</th>
-            <th style={th}>Akcje</th>
-          </tr>
-        </thead>
-        <tbody>
-          {filtered.length === 0 && (
-            <tr>
-              <td colSpan={5} style={{ textAlign: "center", padding: "1rem", color: "#94a3b8" }}>
-                Brak pytań
-              </td>
-            </tr>
-          )}
-          {filtered.map((q) => (
-            <tr key={q.id} style={{ borderBottom: "1px solid #334155" }}>
-              <td style={td}>{q.content}</td>
-              <td style={td}>{q.type === "SCALE" ? "Skala 1-5" : "Otwarte"}</td>
-              <td style={td}>{q.category?.name ?? "—"}</td>
-              <td style={td}>{q.module}</td>
-              <td style={td}>
-                <a href={`/admin/questions/${q.id}`}>
-                  <button style={{ ...btn, background: "#f59e0b" }}>Edytuj</button>
-                </a>
-                <button onClick={() => handleDelete(q.id)} style={{ ...btn, background: "#ef4444" }}>
-                  Usuń
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+        <div className="bg-white border border-zinc-200/60 rounded-2xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="bg-zinc-50 border-b border-zinc-100">
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 w-24">
+                    Kod
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">
+                    Treść pytania
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 w-32">
+                    Typ
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 w-44">
+                    Kategoria
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 w-44">
+                    Moduł
+                  </th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 w-40 text-right">
+                    Akcje
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-100 font-medium text-zinc-800">
+                {filtered.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={6}
+                      className="text-center py-12 text-zinc-400 font-medium"
+                    >
+                      Brak pytań spełniających kryteria wyszukiwania.
+                    </td>
+                  </tr>
+                ) : (
+                  filtered.map((q) => (
+                    <tr
+                      key={q.id}
+                      className="hover:bg-zinc-50/60 transition-colors"
+                    >
+                      <td className="px-6 py-4.5 font-bold text-zinc-900 whitespace-nowrap">
+                        <span className="bg-zinc-100 border border-zinc-200 text-zinc-800 px-2.5 py-1 rounded-lg text-xs font-mono tracking-wide">
+                          {q.id}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4.5 font-medium text-zinc-800 max-w-md break-words">
+                        {q.content}
+                      </td>
+                      <td className="px-6 py-4.5 whitespace-nowrap">
+                        <span
+                          className={`inline-block px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide ${
+                            q.type === "SCALE"
+                              ? "bg-zinc-50 border border-zinc-200 text-zinc-700"
+                              : "bg-indigo-50 border border-indigo-100 text-indigo-600"
+                          }`}
+                        >
+                          {q.type === "SCALE" ? "Skala 1-5" : "Otwarte"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4.5 text-zinc-500 whitespace-nowrap">
+                        {q.category?.name || (
+                          <span className="text-zinc-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4.5 text-zinc-500 whitespace-nowrap">
+                        {q.module || <span className="text-zinc-300">—</span>}
+                      </td>
+                      <td className="px-6 py-4.5 whitespace-nowrap text-right text-xs font-bold uppercase tracking-wider space-x-2">
+                        <Link href={`/admin/questions/${q.id}`}>
+                          <button className="px-3 py-1.5 border border-zinc-200 hover:bg-zinc-50 text-zinc-700 rounded-lg transition-all active:scale-95">
+                            Edytuj
+                          </button>
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(q.id)}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg transition-all active:scale-95"
+                        >
+                          Usuń
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
-
-const th: React.CSSProperties = {
-  padding: "0.75rem",
-  textAlign: "left",
-  fontWeight: "bold",
-  borderBottom: "2px solid #334155",
-  color: "#f1f5f9",
-};
-
-const td: React.CSSProperties = {
-  padding: "0.75rem",
-  color: "#f1f5f9",
-};
-
-const btn: React.CSSProperties = {
-  marginRight: "0.5rem",
-  padding: "0.3rem 0.75rem",
-  color: "white",
-  border: "none",
-  borderRadius: "4px",
-  cursor: "pointer",
-};

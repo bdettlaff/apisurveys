@@ -62,6 +62,14 @@ export const Navbar = () => {
               >
                 Stwórz ankietę
               </Link>
+
+              {/* NOWY LINK: Panel Admina */}
+              <Link
+                href="/admin/questions"
+                className="text-sm font-bold text-amber-600 hover:text-amber-700 transition-colors bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200/60"
+              >
+                Pytania (Admin)
+              </Link>
             </div>
           )}
         </div>
@@ -129,6 +137,15 @@ export const Navbar = () => {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Stwórz ankietę
+              </Link>
+
+              {/* NOWY LINK MOBILNY: Panel Admina */}
+              <Link
+                href="/admin/questions"
+                className="text-sm font-bold text-amber-600 p-2 bg-amber-50 rounded-lg border border-amber-100"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Pytania (Admin)
               </Link>
             </>
           )}
