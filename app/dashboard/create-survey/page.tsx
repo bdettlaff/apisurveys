@@ -191,11 +191,8 @@ export default function CreateSurveyPage() {
       <main className="max-w-7xl mx-auto px-4 pt-28 pb-16">
         <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight uppercase text-zinc-900">
-            Zarządzanie Generatorami Ankiet
+            Zarządzanie Ankietami
           </h1>
-          <p className="text-xs font-bold text-zinc-400 tracking-wider uppercase mt-1">
-            Architektura zsynchronizowana z relacjami bazy danych Spring Boot
-          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start">

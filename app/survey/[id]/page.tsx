@@ -55,11 +55,6 @@ export default function FillSurveyPage() {
   const handleSubmit = async () => {
     setSubmitting(true);
 
-    // --- DIAGNOSTYKA: ZOBACZ TO W KONSOLI F12 ---
-    console.log("=== WYSYŁANIE DANYCH ===");
-    console.log("JSON wysyłany do API:", JSON.stringify(answers, null, 2));
-    // --------------------------------------------
-
     try {
       const token = await getAccessToken();
       const response = await fetch(
@@ -76,16 +71,17 @@ export default function FillSurveyPage() {
 
       if (response.status === 409) {
         alert("Już wypełniłeś tę ankietę!");
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
         return;
       }
 
       if (!response.ok) throw new Error("Wystąpił błąd podczas wysyłania.");
 
       alert("Dziękujemy! Odpowiedzi zostały zapisane.");
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     } catch (err: any) {
       alert("Błąd: " + err.message);
+      window.location.href = "/dashboard";
     } finally {
       setSubmitting(false);
     }
@@ -101,16 +97,21 @@ export default function FillSurveyPage() {
       <Navbar />
       <main className="max-w-2xl mx-auto p-6">
         <div className="bg-white p-8 rounded-3xl border border-zinc-200 shadow-sm">
-          <h1 className="text-2xl font-black mb-8">Wypełnij ankietę</h1>
+          <h1 className="text-2xl font-black mb-8 text-center">Wypełnij ankietę</h1>
 
           <div className="space-y-8">
-            {questions.map((q) => (
+            {questions.map((q, index) => (
               <div key={q.id} className="pb-6 border-b border-zinc-100">
-                <p className="font-bold text-zinc-800 mb-4">{q.content}</p>
+                <div className="flex items-start gap-3 mb-4">
+                  <span className="flex items-center justify-center bg-indigo-50 text-indigo-600 font-black rounded-lg text-sm px-2.5 py-1 border border-indigo-100 min-w-[32px] select-none">
+                    {index + 1}
+                  </span>
+                  <p className="font-bold text-zinc-800 pt-0.5">{q.content}</p>
+                </div>
 
                 {q.id === "A+" || q.id === "A-" ? (
                   <textarea
-                    className="w-full p-4 border border-zinc-200 rounded-xl bg-zinc-50 focus:ring-2 focus:ring-indigo-500 outline-none transition"
+                    className="w-full p-4 border border-zinc-200 rounded-xl bg-zinc-50 focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm"
                     placeholder="Wpisz swoją odpowiedź..."
                     value={answers[q.id] || ""}
                     onChange={(e) =>
@@ -118,15 +119,15 @@ export default function FillSurveyPage() {
                     }
                   />
                 ) : (
-                  <div className="flex gap-2">
+                  <div className="flex justify-between max-w-md pl-11">
                     {[1, 2, 3, 4, 5].map((r) => (
                       <button
                         key={r}
                         onClick={() => setAnswers({ ...answers, [q.id]: r })}
                         className={`w-10 h-10 rounded-full font-bold transition-all ${
                           answers[q.id] === r
-                            ? "bg-indigo-600 text-white scale-110 shadow-lg"
-                            : "bg-zinc-100 hover:bg-zinc-200"
+                            ? "bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-100"
+                            : "bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
                         }`}
                       >
                         {r}
