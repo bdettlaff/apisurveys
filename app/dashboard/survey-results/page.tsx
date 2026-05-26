@@ -37,18 +37,23 @@ export default function SurveyResultsPage() {
       .catch((err) => console.error("Błąd ładowania danych:", err));
   }, []);
 
-  // Pobranie unikalnych klas tylko z tych rekordów, które mają jakiekolwiek dane
   const allClasses = Array.from(
     new Set(data.flatMap((t) => t.classNames || [])),
   );
 
-  const getCleanStats = (teacher: any) => {
-    if (!teacher.averages) return {};
+  const getStatsForDisplay = (teacher: any) => {
+    let statsSource =
+      selectedClass === "Wszystkie klasy"
+        ? teacher.averages
+        : teacher.averagesPerClass?.[selectedClass];
+
+    if (!statsSource) return {};
+
     const stats: any = {};
-    Object.keys(teacher.averages).forEach((key) => {
+    Object.keys(statsSource).forEach((key) => {
       if (key.startsWith("avg")) {
         stats[key] = {
-          avg: teacher.averages[key],
+          avg: statsSource[key],
           label: key.replace("avg", ""),
         };
       }
@@ -56,9 +61,24 @@ export default function SurveyResultsPage() {
     return stats;
   };
 
+  // Nowa funkcja dla dynamicznej liczby głosów
+  const getTotalVotesForDisplay = (teacher: any) => {
+    if (selectedClass === "Wszystkie klasy") {
+      return teacher.totalVotes;
+    }
+    return teacher.totalVotesPerClass?.[selectedClass] || 0;
+  };
+
+  const getCommentsForDisplay = (teacher: any) => {
+    return selectedClass === "Wszystkie klasy"
+      ? teacher.comments || []
+      : teacher.commentsPerClass?.[selectedClass] || [];
+  };
+
   const displayedTeachers = data.filter((t) => {
-    // Ukrywamy nauczycieli bez głosów
-    if (t.totalVotes === 0) return false;
+    // Sprawdzamy czy są głosy ogólne lub dla danej klasy
+    const votes = getTotalVotesForDisplay(t);
+    if (votes === 0) return false;
 
     const matchSubject =
       selectedSubject === "Wszystkie przedmioty" ||
@@ -69,6 +89,7 @@ export default function SurveyResultsPage() {
     const matchClass =
       selectedClass === "Wszystkie klasy" ||
       (t.classNames && t.classNames.includes(selectedClass));
+
     return matchSubject && matchTeacher && matchClass;
   });
 
@@ -112,38 +133,45 @@ export default function SurveyResultsPage() {
         </div>
 
         {displayedTeachers.length > 0 ? (
-          displayedTeachers.map((teacher) => (
-            <div
-              key={teacher.teacherId}
-              className="bg-white p-8 rounded-3xl border shadow-sm"
-            >
-              <h2 className="text-xl font-black mb-6">{teacher.teacherName}</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
-                  <StatsChart
-                    stats={getCleanStats(teacher)}
-                    totalVotes={teacher.totalVotes}
+          displayedTeachers.map((teacher) => {
+            const currentComments = getCommentsForDisplay(teacher);
+            const currentVotes = getTotalVotesForDisplay(teacher);
+
+            return (
+              <div
+                key={`${teacher.teacherId}-${selectedClass}`}
+                className="bg-white p-8 rounded-3xl border shadow-sm"
+              >
+                <h2 className="text-xl font-black mb-6">
+                  {teacher.teacherName}
+                </h2>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                  <div className="lg:col-span-2">
+                    <StatsChart
+                      stats={getStatsForDisplay(teacher)}
+                      totalVotes={currentVotes}
+                    />
+                  </div>
+                  <CommentList
+                    comments={{
+                      positive: currentComments
+                        .filter((c: any) => c.type === "POZYTYWNA")
+                        .map((c: any) => c.text),
+                      constructive: currentComments
+                        .filter((c: any) => c.type === "KONSTRUKTYWNA")
+                        .map((c: any) => c.text),
+                      internal: currentComments
+                        .filter((c: any) => c.type === "INTERNAL")
+                        .map((c: any) => c.text),
+                    }}
                   />
                 </div>
-                <CommentList
-                  comments={{
-                    positive: (teacher.comments || [])
-                      .filter((c: any) => c.type === "POZYTYWNA")
-                      .map((c: any) => c.text),
-                    constructive: (teacher.comments || [])
-                      .filter((c: any) => c.type === "KONSTRUKTYWNA")
-                      .map((c: any) => c.text),
-                    internal: (teacher.comments || [])
-                      .filter((c: any) => c.type === "INTERNAL")
-                      .map((c: any) => c.text),
-                  }}
-                />
               </div>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="text-center py-20 text-zinc-400">
-            Brak wyników spełniających kryteria filtrowania.
+            Brak wyników spełniających kryteria.
           </div>
         )}
       </div>
