@@ -1,164 +1,123 @@
 "use client";
 
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
-import { TestBackendBtn } from "../components/TestBackendBtn/TestBackendBtn";
 import { Navbar } from "../components/Navbar/Navbar";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { loginRequest } from "@/authConfig";
-import { InteractionStatus } from "@azure/msal-browser";
+import { useEffect, useState, useCallback } from "react";
 
-import SurveyForm from "../components/Surveys/SurveyForm";
-
-type SchoolClass = {
-  id: number;
-  name: string;
-};
-
-type CurrentUser = {
-  id: number;
-  login: string;
-  role: "STUDENT" | "TEACHER" | "ADMIN";
+type SchoolClass = { id: number; name: string };
+type Survey = {
+  surveyId: number;
+  typeOrTeacher: string;
+  targetClass: string;
+  startDate: string;
+  endDate: string;
 };
 
 export default function DashboardPage() {
-  const { instance, accounts, inProgress } = useMsal();
+  const { accounts, instance } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
 
   const [classId, setClassId] = useState<number | null>(null);
   const [classes, setClasses] = useState<SchoolClass[]>([]);
-  const [classesLoading, setClassesLoading] = useState<boolean>(false);
-  const [classesError, setClassesError] = useState<string | null>(null);
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [userError, setUserError] = useState<string | null>(null);
+  const [activeSurveys, setActiveSurveys] = useState<Survey[]>([]);
+  const [completedSurveys, setCompletedSurveys] = useState<number[]>([]);
+  const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
+
+  const getAccessToken = useCallback(async () => {
+    if (accounts.length === 0) return null;
+    try {
+      const response = await instance.acquireTokenSilent({
+        scopes: ["api://d5614add-3e17-42b6-a294-fc218d0f61e6/access_as_user"],
+        account: accounts[0],
+      });
+      return response.accessToken;
+    } catch (e) {
+      console.error("Błąd pobierania tokena", e);
+      return null;
+    }
+  }, [instance, accounts]);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/");
+      return;
     }
+
+    Promise.all([
+      fetch("http://localhost:8080/api/classes").then((res) => res.json()),
+      fetch("http://localhost:8080/api/admin/surveys/active").then((res) =>
+        res.json(),
+      ),
+    ]).then(([classList, surveys]) => {
+      setClasses(classList);
+      setActiveSurveys(surveys);
+    });
   }, [isAuthenticated, router]);
 
   useEffect(() => {
-    const shouldFetchUser =
-      isAuthenticated &&
-      accounts.length > 0 &&
-      inProgress === InteractionStatus.None &&
-      !currentUser;
+    const checkStatuses = async () => {
+      if (activeSurveys.length === 0) return;
 
-    if (!shouldFetchUser) return;
-
-    const timer = setTimeout(async () => {
-      try {
-        const authResult = await instance.acquireTokenSilent({
-          scopes: ["api://d5614add-3e17-42b6-a294-fc218d0f61e6/access_as_user"],
-          account: accounts[0],
-        });
-
-        const res = await fetch("http://localhost:8080/api/v1/me", {
-          headers: {
-            Authorization: `Bearer ${authResult.accessToken}`,
-          },
-        });
-
-        if (res.status === 403) {
-          setUserError(
-            "Nie masz dostępu do systemu. Skontaktuj się z administracją szkoły.",
-          );
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error(
-            `Nie udało się pobrać użytkownika. Status: ${res.status}`,
-          );
-        }
-
-        const data: CurrentUser = await res.json();
-        setCurrentUser(data);
-      } catch (e: any) {
-        setUserError(e?.message ?? "Nie udało się pobrać roli użytkownika.");
+      setIsLoadingStatuses(true);
+      const token = await getAccessToken();
+      if (!token) {
+        setIsLoadingStatuses(false);
+        return;
       }
-    }, 0);
 
-    return () => clearTimeout(timer);
-  }, [isAuthenticated, accounts, inProgress, currentUser, instance]);
-
-  useEffect(() => {
-    if (!isAuthenticated) return;
-
-    async function fetchClasses() {
-      try {
-        setClassesLoading(true);
-        setClassesError(null);
-
-        const res = await fetch("http://localhost:8080/api/classes");
-        if (!res.ok) {
-          throw new Error(`Nie udało się pobrać klas (status ${res.status}).`);
+      // Sprawdzanie wszystkich ankiet równolegle
+      const promises = activeSurveys.map(async (s) => {
+        try {
+          const res = await fetch(
+            `http://localhost:8080/api/surveys/${s.surveyId}/is-completed`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
+          return res.ok && (await res.json()) ? s.surveyId : null;
+        } catch {
+          return null;
         }
+      });
 
-        const data: SchoolClass[] = await res.json();
-        setClasses(data);
+      const results = (await Promise.all(promises)).filter(
+        (id): id is number => id !== null,
+      );
+      setCompletedSurveys(results);
+      setIsLoadingStatuses(false);
+    };
 
-        setClassId((prev) =>
-          prev !== null && data.some((c) => c.id === prev) ? prev : null,
-        );
-      } catch (e: any) {
-        setClasses([]);
-        setClassId(null);
-        setClassesError(e?.message ?? "Nie udało się pobrać listy klas");
-      } finally {
-        setClassesLoading(false);
-      }
-    }
+    checkStatuses();
+  }, [activeSurveys, getAccessToken]);
 
-    fetchClasses();
-  }, [isAuthenticated]);
-
-  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const v = e.target.value;
-    setClassId(v ? Number(v) : null);
-  };
+  const selectedClassName = classes.find((c) => c.id === classId)?.name;
+  const filteredSurveys = classId
+    ? activeSurveys.filter((s) => s.targetClass === selectedClassName)
+    : [];
 
   if (!isAuthenticated) return null;
 
   return (
     <div className="min-h-screen bg-zinc-50">
       <Navbar />
-      <main className="flex flex-col items-center justify-center pt-32 pb-12 px-6">
-        <div className="w-full max-w-2xl p-12 bg-white rounded-2xl shadow-xl flex flex-col items-center border border-zinc-200">
-          <h1 className="text-3xl font-black text-tau-dark mb-2 text-center">
+      <main className="flex flex-col items-center pt-32 pb-12 px-6">
+        <div className="w-full max-w-2xl p-8 bg-white rounded-2xl shadow-xl border border-zinc-200">
+          <h1 className="text-2xl font-black mb-6 text-center">
             Witaj, {accounts[0]?.name}!
           </h1>
-          <p className="text-zinc-500 mb-6 text-center font-medium">
-            Zalogowano pomyślnie do systemu ewaluacji
-          </p>
-          {userError && (
-            <div className="w-full mb-6 p-4 rounded-xl bg-red-50 text-red-600 text-sm font-medium text-center">
-              {userError}
-            </div>
-          )}
 
-          {currentUser && (
-            <div className="w-full mb-6 p-4 rounded-xl bg-blue-50 text-blue-700 text-sm font-medium text-center">
-              Twoja rola: <strong>{currentUser.role}</strong>
-            </div>
-          )}
-
-          <div className="w-full max-w-xs mb-8 flex flex-col items-center">
-            <label
-              htmlFor="class-select"
-              className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2"
-            >
-              Wybierz swoją klasę, aby wyświetlić nauczycieli:
+          <div className="mb-8">
+            <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">
+              Wybierz swoją klasę:
             </label>
-
             <select
-              id="class-select"
-              onChange={handleClassChange}
+              onChange={(e) =>
+                setClassId(e.target.value ? Number(e.target.value) : null)
+              }
               value={classId ?? ""}
-              disabled={classesLoading || !!classesError}
-              className="w-full px-4 py-2.5 bg-zinc-50 border border-zinc-300 rounded-xl text-zinc-700 font-medium focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all cursor-pointer text-sm shadow-sm"
+              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
             >
               <option value="">-- Wybierz klasę --</option>
               {classes.map((c) => (
@@ -167,30 +126,55 @@ export default function DashboardPage() {
                 </option>
               ))}
             </select>
-
-            {classesLoading && (
-              <div className="mt-2 text-xs text-zinc-400">
-                Ładowanie listy klas...
-              </div>
-            )}
-            {classesError && (
-              <div className="mt-2 text-xs text-red-500">
-                Błąd: {classesError}
-              </div>
-            )}
           </div>
 
-          <div className="w-full flex justify-center pt-4 border-t border-zinc-100">
-            <TestBackendBtn />
-          </div>
-
-          {classId !== null ? (
-            <div className="w-full mt-8 pt-8 border-t border-zinc-100">
-              <SurveyForm classId={classId} />
-            </div>
-          ) : (
-            <div className="w-full mt-8 pt-8 border-t border-zinc-100 text-center text-sm text-zinc-400 italic">
-              Wybierz klasę powyżej, aby wyświetlić listę nauczycieli.
+          {classId !== null && (
+            <div className="border-t pt-8">
+              <h2 className="font-bold text-lg mb-4 text-zinc-800">
+                Ankiety dla klasy {selectedClassName}:
+              </h2>
+              {isLoadingStatuses ? (
+                <p className="text-zinc-400 text-sm italic">
+                  Sprawdzanie statusu ankiet...
+                </p>
+              ) : filteredSurveys.length > 0 ? (
+                <div className="grid gap-4">
+                  {filteredSurveys.map((s) => {
+                    const isCompleted = completedSurveys.includes(s.surveyId);
+                    return (
+                      <div
+                        key={s.surveyId}
+                        className="flex justify-between items-center p-4 bg-zinc-50 rounded-xl border border-zinc-200"
+                      >
+                        <div>
+                          <p className="font-bold text-sm text-zinc-800">
+                            {s.typeOrTeacher}
+                          </p>
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase">
+                            {s.startDate} - {s.endDate}
+                          </p>
+                        </div>
+                        {isCompleted ? (
+                          <div className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-bold border border-emerald-200">
+                            ✓ Wysłano
+                          </div>
+                        ) : (
+                          <a
+                            href={`/survey/${s.surveyId}`}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+                          >
+                            Wypełnij
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-zinc-500 italic text-sm">
+                  Brak aktywnych ankiet dla tej klasy.
+                </p>
+              )}
             </div>
           )}
         </div>

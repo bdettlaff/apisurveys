@@ -2,47 +2,69 @@
 
 import { useState, useEffect } from "react";
 import { useIsAuthenticated } from "@azure/msal-react";
-import { useRouter } from "next/navigation";
-import { TeacherSelector } from "../../components/TeacherSelector/TeacherSelector";
 import { Navbar } from "../../components/Navbar/Navbar";
 import { StatsChart } from "../../components/StatsChart/StatsChart";
 import { CommentList } from "../../components/CommentList/CommentList";
+import { TeacherSelector } from "../../components/TeacherSelector/TeacherSelector";
 
 export default function SurveyResultsPage() {
   const isAuthenticated = useIsAuthenticated();
-  const router = useRouter();
-
   const [data, setData] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<string[]>(["Wszystkie przedmioty"]);
   const [teachers, setTeachers] = useState<any[]>([]);
-
   const [selectedSubject, setSelectedSubject] = useState(
     "Wszystkie przedmioty",
   );
   const [selectedTeacherId, setSelectedTeacherId] = useState("all");
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/results/all")
-      .then((res) => res.json())
-      .then(setData);
-    fetch("http://localhost:8080/api/results/subjects-list")
-      .then((res) => res.json())
-      .then((s) => setSubjects(["Wszystkie przedmioty", ...s]));
-    fetch("http://localhost:8080/api/results/teachers-list")
-      .then((res) => res.json())
-      .then(setTeachers);
+    Promise.all([
+      fetch("http://localhost:8080/api/results/all").then((res) => res.json()),
+      fetch("http://localhost:8080/api/results/subjects-list").then((res) =>
+        res.json(),
+      ),
+      fetch("http://localhost:8080/api/results/teachers-list").then((res) =>
+        res.json(),
+      ),
+    ])
+      .then(([results, subs, teachs]) => {
+        setData(results || []);
+        setSubjects(["Wszystkie przedmioty", ...(subs || [])]);
+        setTeachers(teachs || []);
+      })
+      .catch((err) => console.error("Błąd ładowania:", err));
   }, []);
 
+  const getCleanStats = (teacher: any) => {
+    // Sprawdzamy, czy obiekt teacher zawiera mapę averages
+    if (!teacher.averages) return {};
+
+    const stats: any = {};
+
+    // Iterujemy po mapie averages przesyłanej z backendu
+    Object.keys(teacher.averages).forEach((key) => {
+      const avgValue = teacher.averages[key];
+
+      // key to np. "avgA1", "avgL1"
+      // label to "A1", "L1"
+      const label = key.replace("avg", "");
+
+      stats[key] = {
+        avg: avgValue,
+        label: label,
+      };
+    });
+
+    return stats;
+  };
+
   const displayedTeachers = data.filter((t) => {
-    // Logika filtra: sprawdza czy wybrano "Wszystkie" lub czy nazwy przedmiotów są identyczne
     const matchSubject =
       selectedSubject === "Wszystkie przedmioty" ||
       t.subjectName === selectedSubject;
-
     const matchTeacher =
       selectedTeacherId === "all" ||
-      t.teacherId.toString() === selectedTeacherId;
-
+      String(t.teacherId) === String(selectedTeacherId);
     return matchSubject && matchTeacher;
   });
 
@@ -58,7 +80,7 @@ export default function SurveyResultsPage() {
           selectedSubject={selectedSubject}
           onSubjectChange={setSelectedSubject}
           teachers={teachers.map((t) => ({
-            teacherId: t.id.toString(),
+            teacherId: String(t.id),
             teacherName: `${t.firstName} ${t.lastName}`,
           }))}
           selectedTeacherId={selectedTeacherId}
@@ -71,37 +93,30 @@ export default function SurveyResultsPage() {
             className="bg-white p-8 rounded-3xl border shadow-sm"
           >
             <h2 className="text-xl font-black">{teacher.teacherName}</h2>
-            <p className="text-sm text-zinc-500 mb-4">
-              Przedmiot: {teacher.subjectName}
-            </p>
-
             {teacher.totalVotes > 0 ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <StatsChart
-                  stats={{
-                    A1: { avg: teacher.avgClarity, label: "Jasność" },
-                    L4: { avg: teacher.avgPreparation, label: "Przygotowanie" },
-                    B2: { avg: teacher.avgFairness, label: "Sprawiedliwość" },
-                    C1: { avg: teacher.avgCulture, label: "Kultura" },
-                  }}
-                  totalVotes={teacher.totalVotes}
-                />
+                <div className="lg:col-span-2">
+                  <StatsChart
+                    stats={getCleanStats(teacher)}
+                    totalVotes={teacher.totalVotes}
+                  />
+                </div>
                 <CommentList
                   comments={{
-                    positive: teacher.comments
+                    positive: (teacher.comments || [])
                       .filter((c: any) => c.type === "POZYTYWNA")
                       .map((c: any) => c.text),
-                    constructive: teacher.comments
+                    constructive: (teacher.comments || [])
                       .filter((c: any) => c.type === "KONSTRUKTYWNA")
                       .map((c: any) => c.text),
-                    internal: [],
+                    internal: (teacher.comments || [])
+                      .filter((c: any) => c.type === "INTERNAL")
+                      .map((c: any) => c.text),
                   }}
                 />
               </div>
             ) : (
-              <p className="text-zinc-400 mt-4">
-                Brak ocen dla tego nauczyciela.
-              </p>
+              <p className="text-zinc-400">Brak głosów.</p>
             )}
           </div>
         ))}
