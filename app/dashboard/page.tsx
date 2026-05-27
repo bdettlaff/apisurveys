@@ -5,7 +5,6 @@ import { Navbar } from "../components/Navbar/Navbar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 
-type SchoolClass = { id: number; name: string };
 type Survey = {
   surveyId: number;
   typeOrTeacher: string;
@@ -19,11 +18,13 @@ export default function DashboardPage() {
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
 
-  const [classId, setClassId] = useState<number | null>(null);
-  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [accessCode, setAccessCode] = useState<string>("");
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [className, setClassName] = useState<string | null>(null);
   const [activeSurveys, setActiveSurveys] = useState<Survey[]>([]);
   const [completedSurveys, setCompletedSurveys] = useState<number[]>([]);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const getAccessToken = useCallback(async () => {
     if (accounts.length === 0) return null;
@@ -42,64 +43,65 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/");
-      return;
     }
-
-    Promise.all([
-      fetch("http://localhost:8080/api/classes").then((res) => res.json()),
-      fetch("http://localhost:8080/api/admin/surveys/active").then((res) =>
-        res.json(),
-      ),
-    ]).then(([classList, surveys]) => {
-      setClasses(classList);
-      setActiveSurveys(surveys);
-    });
   }, [isAuthenticated, router]);
 
   useEffect(() => {
     const checkStatuses = async () => {
       if (activeSurveys.length === 0) return;
-
       setIsLoadingStatuses(true);
       const token = await getAccessToken();
       if (!token) {
         setIsLoadingStatuses(false);
         return;
       }
-
-      // Sprawdzanie wszystkich ankiet równolegle
       const promises = activeSurveys.map(async (s) => {
         try {
           const res = await fetch(
             `http://localhost:8080/api/surveys/${s.surveyId}/is-completed`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            },
+            { headers: { Authorization: `Bearer ${token}` } }
           );
           return res.ok && (await res.json()) ? s.surveyId : null;
         } catch {
           return null;
         }
       });
-
       const results = (await Promise.all(promises)).filter(
-        (id): id is number => id !== null,
+        (id): id is number => id !== null
       );
       setCompletedSurveys(results);
       setIsLoadingStatuses(false);
     };
-
     checkStatuses();
   }, [activeSurveys, getAccessToken]);
 
-  const selectedClassName = classes.find((c) => c.id === classId)?.name;
-  
-  // Filtrowanie oraz sortowanie alfabetyczne z obsługą polskich znaków
-  const filteredSurveys = classId
-    ? activeSurveys
-        .filter((s) => s.targetClass === selectedClassName)
-        .sort((a, b) => a.typeOrTeacher.localeCompare(b.typeOrTeacher, "pl"))
-    : [];
+  const handleSearch = async () => {
+    if (!accessCode.trim()) return;
+    setCodeError(null);
+    setIsSearching(true);
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/admin/surveys/active/by-code/${accessCode.trim().toUpperCase()}`
+      );
+      if (!res.ok) {
+        setCodeError("Nie znaleziono klasy o tym kodzie. Sprawdź kod i spróbuj ponownie.");
+        setActiveSurveys([]);
+        setClassName(null);
+        setIsSearching(false);
+        return;
+      }
+      const surveys: Survey[] = await res.json();
+      setActiveSurveys(surveys);
+      setClassName(surveys.length > 0 ? surveys[0].targetClass : accessCode);
+    } catch {
+      setCodeError("Błąd połączenia z serwerem.");
+    }
+    setIsSearching(false);
+  };
+
+  const sortedSurveys = [...activeSurveys].sort((a, b) =>
+    a.typeOrTeacher.localeCompare(b.typeOrTeacher, "pl")
+  );
 
   if (!isAuthenticated) return null;
 
@@ -114,36 +116,45 @@ export default function DashboardPage() {
 
           <div className="mb-8">
             <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">
-              Wybierz swoją klasę:
+              Wpisz kod swojej klasy:
             </label>
-            <select
-              onChange={(e) =>
-                setClassId(e.target.value ? Number(e.target.value) : null)
-              }
-              value={classId ?? ""}
-              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-            >
-              <option value="">-- Wybierz klasę --</option>
-              {classes.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={accessCode}
+                onChange={(e) => {
+                  setAccessCode(e.target.value.toUpperCase());
+                  setCodeError(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="np. 2TPTAU-A3F1"
+                className="flex-1 px-4 py-3 bg-zinc-50 border border-zinc-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-mono tracking-widest"
+              />
+              <button
+                onClick={handleSearch}
+                disabled={isSearching || !accessCode.trim()}
+                className="px-5 py-3 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
+              >
+                {isSearching ? "..." : "Szukaj"}
+              </button>
+            </div>
+            {codeError && (
+              <p className="text-red-500 text-xs mt-2 font-medium">{codeError}</p>
+            )}
           </div>
 
-          {classId !== null && (
+          {className !== null && (
             <div className="border-t pt-8">
               <h2 className="font-bold text-lg mb-4 text-zinc-800">
-                Ankiety dla klasy {selectedClassName}:
+                Ankiety dla klasy {className}:
               </h2>
               {isLoadingStatuses ? (
                 <p className="text-zinc-400 text-sm italic">
                   Sprawdzanie statusu ankiet...
                 </p>
-              ) : filteredSurveys.length > 0 ? (
+              ) : sortedSurveys.length > 0 ? (
                 <div className="grid gap-4">
-                  {filteredSurveys.map((s) => {
+                  {sortedSurveys.map((s) => {
                     const isCompleted = completedSurveys.includes(s.surveyId);
                     return (
                       <div

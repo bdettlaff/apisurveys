@@ -9,6 +9,7 @@ interface ActiveSurvey {
   targetClass: string;
   startDate: string;
   endDate: string;
+  accessCode: string | null;
 }
 
 export default function ActiveSurveysPage() {
@@ -16,6 +17,7 @@ export default function ActiveSurveysPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedClasses, setExpandedClasses] = useState<string[]>([]);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("http://localhost:8080/api/admin/surveys/active")
@@ -33,7 +35,6 @@ export default function ActiveSurveysPage() {
       });
   }, []);
 
-  // Grupowanie ankiet według klas
   const surveysByClass = surveys.reduce(
     (acc, survey) => {
       if (!acc[survey.targetClass]) acc[survey.targetClass] = [];
@@ -49,6 +50,13 @@ export default function ActiveSurveysPage() {
         ? prev.filter((c) => c !== className)
         : [...prev, className],
     );
+  };
+
+  const handleCopy = (code: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 1500);
   };
 
   if (loading)
@@ -73,57 +81,77 @@ export default function ActiveSurveysPage() {
             </p>
           </div>
         ) : (
-          Object.entries(surveysByClass).map(([className, classSurveys]) => (
-            <div
-              key={className}
-              className="mb-4 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm"
-            >
-              <button
-                onClick={() => toggleClass(className)}
-                className="w-full p-6 flex justify-between items-center hover:bg-gray-50 transition-colors"
+          Object.entries(surveysByClass).map(([className, classSurveys]) => {
+            const code = classSurveys[0].accessCode;
+            return (
+              <div
+                key={className}
+                className="mb-4 bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm"
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl font-bold text-gray-900">
-                    Klasa {className}
-                  </span>
-                  <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">
-                    {classSurveys.length}{" "}
-                    {classSurveys.length === 1
-                      ? "aktywna ankieta"
-                      : "aktywne ankiety"}
-                  </span>
-                </div>
-                <span className="text-gray-400 font-bold">
-                  {expandedClasses.includes(className) ? "▲" : "▼"}
-                </span>
-              </button>
+                <button
+                  onClick={() => toggleClass(className)}
+                  className="w-full p-6 flex justify-between items-center hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="text-xl font-bold text-gray-900">
+                      Klasa {className}
+                    </span>
+                    <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-1 rounded-full">
+                      {classSurveys.length}{" "}
+                      {classSurveys.length === 1
+                        ? "aktywna ankieta"
+                        : "aktywne ankiety"}
+                    </span>
 
-              {expandedClasses.includes(className) && (
-                <div className="px-6 pb-6 pt-2 border-t border-gray-100 bg-gray-50/50">
-                  <div className="space-y-3 mt-3">
-                    {classSurveys.map((survey) => (
-                      <div
-                        key={survey.surveyId}
-                        className="p-4 bg-white rounded-lg border border-gray-200 flex justify-between items-center shadow-sm"
-                      >
-                        <div>
-                          <p className="font-bold text-gray-800">
-                            {survey.typeOrTeacher}
-                          </p>
-                          <p className="text-xs text-gray-500 font-medium">
-                            {survey.startDate} — {survey.endDate}
-                          </p>
-                        </div>
-                        <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">
-                          AKTYWNA
+                    {code && (
+                      <span className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                        <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                          Kod:
                         </span>
-                      </div>
-                    ))}
+                        <span className="font-mono font-black text-sm text-emerald-900 tracking-widest">
+                          {code}
+                        </span>
+                        <span
+                          onClick={(e) => handleCopy(code, e)}
+                          className="text-[10px] font-bold bg-emerald-700 text-white px-2 py-0.5 rounded hover:bg-emerald-800 cursor-pointer"
+                        >
+                          {copiedCode === code ? "OK ✓" : "Kopiuj"}
+                        </span>
+                      </span>
+                    )}
                   </div>
-                </div>
-              )}
-            </div>
-          ))
+                  <span className="text-gray-400 font-bold">
+                    {expandedClasses.includes(className) ? "▲" : "▼"}
+                  </span>
+                </button>
+
+                {expandedClasses.includes(className) && (
+                  <div className="px-6 pb-6 pt-2 border-t border-gray-100 bg-gray-50/50">
+                    <div className="space-y-3 mt-3">
+                      {classSurveys.map((survey) => (
+                        <div
+                          key={survey.surveyId}
+                          className="p-4 bg-white rounded-lg border border-gray-200 flex justify-between items-center shadow-sm"
+                        >
+                          <div>
+                            <p className="font-bold text-gray-800">
+                              {survey.typeOrTeacher}
+                            </p>
+                            <p className="text-xs text-gray-500 font-medium">
+                              {survey.startDate} — {survey.endDate}
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded border border-green-200">
+                            AKTYWNA
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </main>
     </div>
