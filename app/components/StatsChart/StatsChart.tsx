@@ -31,44 +31,51 @@ export function StatsChart({ stats, totalVotes }: StatsProps) {
         </div>
       </div>
 
-      {Object.entries(stats).map(([key, item]) => {
-        const scale = Math.min(item.avg / 5, 1);
-        const barId = `bar_${baseId}_${key}`;
+      {Object.entries(stats)
+        .sort(([keyA], [keyB]) => {
+          const cleanA = keyA.replace("avg", "");
+          const cleanB = keyB.replace("avg", "");
+          return cleanA.localeCompare(cleanB, undefined, { numeric: true, sensitivity: 'base' });
+        })
+        .map(([key, item]) => {
+          const cleanKey = key.replace("avg", "");
+          const scale = Math.min(item.avg / 5, 1);
+          const barId = `bar_${baseId}_${key}`;
 
-        return (
-          <div key={key} className="space-y-2">
-            <style>
-              {`
-                @keyframes ${barId}_kf {
-                  from { transform: scaleX(0); }
-                  to { transform: scaleX(${scale}); }
-                }
-                
-                #${barId} {
-                  animation: ${barId}_kf 1.5s ease-out forwards;
-                }
-              `}
-            </style>
+          return (
+            <div key={key} className="space-y-2">
+              <style>
+                {`
+                  @keyframes ${barId}_kf {
+                    from { transform: scaleX(0); }
+                    to { transform: scaleX(${scale}); }
+                  }
+                  
+                  #${barId} {
+                    animation: ${barId}_kf 1.5s ease-out forwards;
+                  }
+                `}
+              </style>
 
-            <div className="flex justify-between items-end">
-              <span className="text-sm font-bold text-zinc-700">
-                <span className="text-zinc-400 mr-2">Kod {key}</span>
-                {item.label}
-              </span>
-              <span className="text-sm font-black text-indigo-600">
-                {item.avg.toFixed(2)} / 5.00
-              </span>
+              <div className="flex justify-between items-end">
+                <span className="text-sm font-bold text-zinc-700">
+                  <span className="text-zinc-400 mr-2">Pytanie:</span>
+                  {item.label}
+                </span>
+                <span className="text-sm font-black text-indigo-600">
+                  {item.avg.toFixed(2)} / 5.00
+                </span>
+              </div>
+
+              <div className="w-full bg-zinc-100 rounded-full h-2.5 overflow-hidden">
+                <div
+                  id={barId}
+                  className="h-full bg-indigo-600 rounded-full w-full origin-left"
+                />
+              </div>
             </div>
-
-            <div className="w-full bg-zinc-100 rounded-full h-2.5 overflow-hidden">
-              <div
-                id={barId}
-                className="h-full bg-indigo-600 rounded-full w-full origin-left"
-              />
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
     </div>
   );
 }
