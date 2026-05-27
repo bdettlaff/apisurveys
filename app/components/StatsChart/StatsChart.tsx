@@ -59,7 +59,7 @@ export function StatsChart({ stats, totalVotes }: StatsProps) {
 
               <div className="flex justify-between items-end">
                 <span className="text-sm font-bold text-zinc-700">
-                  <span className="text-zinc-400 mr-2">Pytanie:</span>
+                  <span className="text-zinc-400 mr-2">Średnia pytania:</span>
                   {item.label}
                 </span>
                 <span className="text-sm font-black text-indigo-600">

@@ -93,8 +93,12 @@ export default function DashboardPage() {
   }, [activeSurveys, getAccessToken]);
 
   const selectedClassName = classes.find((c) => c.id === classId)?.name;
+  
+  // Filtrowanie oraz sortowanie alfabetyczne z obsługą polskich znaków
   const filteredSurveys = classId
-    ? activeSurveys.filter((s) => s.targetClass === selectedClassName)
+    ? activeSurveys
+        .filter((s) => s.targetClass === selectedClassName)
+        .sort((a, b) => a.typeOrTeacher.localeCompare(b.typeOrTeacher, "pl"))
     : [];
 
   if (!isAuthenticated) return null;
