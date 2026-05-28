@@ -11,6 +11,16 @@ type Survey = {
   targetClass: string;
   startDate: string;
   endDate: string;
+  isSchoolSurvey: boolean;
+};
+
+type TeacherGroup = {
+  teacherName: string;
+  subjects: string[];
+  surveyIds: number[];
+  startDate: string;
+  endDate: string;
+  isSchoolSurvey: boolean;
 };
 
 export default function DashboardPage() {
@@ -22,7 +32,7 @@ export default function DashboardPage() {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [className, setClassName] = useState<string | null>(null);
   const [activeSurveys, setActiveSurveys] = useState<Survey[]>([]);
-  const [completedSurveys, setCompletedSurveys] = useState<number[]>([]);
+  const [completedGroups, setCompletedGroups] = useState<number[]>([]);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
@@ -41,10 +51,72 @@ export default function DashboardPage() {
   }, [instance, accounts]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/");
-    }
+    if (!isAuthenticated) router.push("/");
   }, [isAuthenticated, router]);
+
+  // Grupuje ankiety nauczycielskie po nazwisku; ankiety szkolne trafiają osobno
+  const groupSurveys = (surveys: Survey[]): TeacherGroup[] => {
+    const map = new Map<string, TeacherGroup>();
+
+    surveys.forEach((s) => {
+      // Ankieta szkolna — osobna karta, klucz unikalny po surveyId
+      if (s.isSchoolSurvey) {
+        map.set(`school-${s.surveyId}`, {
+          teacherName: "Ocena szkoły",
+          subjects: [],
+          surveyIds: [s.surveyId],
+          startDate: s.startDate,
+          endDate: s.endDate,
+          isSchoolSurvey: true,
+        });
+        return;
+      }
+
+      // Ankieta nauczycielska — format "Jan Kowalski – Matematyka"
+      const dashIdx = s.typeOrTeacher.indexOf(" – ");
+      const teacherName =
+        dashIdx !== -1
+          ? s.typeOrTeacher.substring(0, dashIdx)
+          : s.typeOrTeacher;
+      const subject =
+        dashIdx !== -1 ? s.typeOrTeacher.substring(dashIdx + 3) : null;
+
+      let existing: TeacherGroup | undefined;
+      for (const g of map.values()) {
+        if (!g.isSchoolSurvey && g.teacherName === teacherName) {
+          existing = g;
+          break;
+        }
+      }
+
+      if (existing) {
+        if (subject && !existing.subjects.includes(subject)) {
+          existing.subjects.push(subject);
+        }
+        existing.surveyIds.push(s.surveyId);
+      } else {
+        map.set(s.surveyId.toString(), {
+          teacherName,
+          subjects: subject ? [subject] : [],
+          surveyIds: [s.surveyId],
+          startDate: s.startDate,
+          endDate: s.endDate,
+          isSchoolSurvey: false,
+        });
+      }
+    });
+
+    // Nauczyciele alfabetycznie, ankieta szkolna zawsze na końcu
+    const teachers = Array.from(map.values())
+      .filter((g) => !g.isSchoolSurvey)
+      .sort((a, b) => a.teacherName.localeCompare(b.teacherName, "pl"));
+
+    const schoolSurveys = Array.from(map.values()).filter(
+      (g) => g.isSchoolSurvey,
+    );
+
+    return [...teachers, ...schoolSurveys];
+  };
 
   useEffect(() => {
     const checkStatuses = async () => {
@@ -55,21 +127,25 @@ export default function DashboardPage() {
         setIsLoadingStatuses(false);
         return;
       }
-      const promises = activeSurveys.map(async (s) => {
+
+      const groups = groupSurveys(activeSurveys);
+
+      const promises = groups.map(async (g) => {
         try {
           const res = await fetch(
-            `http://localhost:8080/api/surveys/${s.surveyId}/is-completed`,
-            { headers: { Authorization: `Bearer ${token}` } }
+            `http://localhost:8080/api/surveys/group/${g.surveyIds[0]}/is-completed?ids=${g.surveyIds.join(",")}`,
+            { headers: { Authorization: `Bearer ${token}` } },
           );
-          return res.ok && (await res.json()) ? s.surveyId : null;
+          return res.ok && (await res.json()) ? g.surveyIds[0] : null;
         } catch {
           return null;
         }
       });
+
       const results = (await Promise.all(promises)).filter(
-        (id): id is number => id !== null
+        (id): id is number => id !== null,
       );
-      setCompletedSurveys(results);
+      setCompletedGroups(results);
       setIsLoadingStatuses(false);
     };
     checkStatuses();
@@ -81,10 +157,12 @@ export default function DashboardPage() {
     setIsSearching(true);
     try {
       const res = await fetch(
-        `http://localhost:8080/api/admin/surveys/active/by-code/${accessCode.trim().toUpperCase()}`
+        `http://localhost:8080/api/admin/surveys/active/by-code/${accessCode.trim().toUpperCase()}`,
       );
       if (!res.ok) {
-        setCodeError("Nie znaleziono klasy o tym kodzie. Sprawdź kod i spróbuj ponownie.");
+        setCodeError(
+          "Nie znaleziono klasy o tym kodzie. Sprawdź kod i spróbuj ponownie.",
+        );
         setActiveSurveys([]);
         setClassName(null);
         setIsSearching(false);
@@ -99,9 +177,7 @@ export default function DashboardPage() {
     setIsSearching(false);
   };
 
-  const sortedSurveys = [...activeSurveys].sort((a, b) =>
-    a.typeOrTeacher.localeCompare(b.typeOrTeacher, "pl")
-  );
+  const allGroups = groupSurveys(activeSurveys);
 
   if (!isAuthenticated) return null;
 
@@ -114,6 +190,7 @@ export default function DashboardPage() {
             Witaj, {accounts[0]?.name}!
           </h1>
 
+          {/* Pole kodu */}
           <div className="mb-8">
             <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">
               Wpisz kod swojej klasy:
@@ -139,44 +216,72 @@ export default function DashboardPage() {
               </button>
             </div>
             {codeError && (
-              <p className="text-red-500 text-xs mt-2 font-medium">{codeError}</p>
+              <p className="text-red-500 text-xs mt-2 font-medium">
+                {codeError}
+              </p>
             )}
           </div>
 
+          {/* Lista ankiet */}
           {className !== null && (
             <div className="border-t pt-8">
               <h2 className="font-bold text-lg mb-4 text-zinc-800">
                 Ankiety dla klasy {className}:
               </h2>
+
               {isLoadingStatuses ? (
                 <p className="text-zinc-400 text-sm italic">
                   Sprawdzanie statusu ankiet...
                 </p>
-              ) : sortedSurveys.length > 0 ? (
+              ) : allGroups.length > 0 ? (
                 <div className="grid gap-4">
-                  {sortedSurveys.map((s) => {
-                    const isCompleted = completedSurveys.includes(s.surveyId);
+                  {allGroups.map((group) => {
+                    const isCompleted = completedGroups.includes(
+                      group.surveyIds[0],
+                    );
+
                     return (
                       <div
-                        key={s.surveyId}
-                        className="flex justify-between items-center p-4 bg-zinc-50 rounded-xl border border-zinc-200"
+                        key={group.surveyIds[0]}
+                        className={`flex justify-between items-center p-4 rounded-xl border ${
+                          group.isSchoolSurvey
+                            ? "bg-emerald-50 border-emerald-200"
+                            : "bg-zinc-50 border-zinc-200"
+                        }`}
                       >
                         <div>
-                          <p className="font-bold text-sm text-zinc-800">
-                            {s.typeOrTeacher}
-                          </p>
-                          <p className="text-[10px] text-zinc-400 font-bold uppercase">
-                            {s.startDate} - {s.endDate}
+                          <div className="flex items-center gap-2">
+                            {group.isSchoolSurvey && (
+                              <span className="text-xs font-black uppercase tracking-wider px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full border border-emerald-200">
+                                Szkoła
+                              </span>
+                            )}
+                            <p className="font-bold text-sm text-zinc-800">
+                              {group.teacherName}
+                            </p>
+                          </div>
+                          {group.subjects.length > 0 && (
+                            <p className="text-xs text-zinc-500 mt-0.5">
+                              {group.subjects.join(", ")}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-zinc-400 font-bold uppercase mt-1">
+                            {group.startDate} – {group.endDate}
                           </p>
                         </div>
+
                         {isCompleted ? (
-                          <div className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-bold border border-emerald-200">
+                          <div className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-bold border border-emerald-200 whitespace-nowrap">
                             ✓ Wysłano
                           </div>
                         ) : (
                           <a
-                            href={`/survey/${s.surveyId}`}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors"
+                            href={`/survey/group/${group.surveyIds[0]}?code=${accessCode}&ids=${group.surveyIds.join(",")}`}
+                            className={`px-4 py-2 text-white rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
+                              group.isSchoolSurvey
+                                ? "bg-emerald-600 hover:bg-emerald-700"
+                                : "bg-indigo-600 hover:bg-indigo-700"
+                            }`}
                           >
                             Wypełnij
                           </a>
