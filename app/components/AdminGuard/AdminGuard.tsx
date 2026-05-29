@@ -19,7 +19,6 @@ export default function AdminGuard({
   const { instance, accounts, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
-
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,13 +65,12 @@ export default function AdminGuard({
     checkRole();
   }, [isAuthenticated, accounts, inProgress, instance, router]);
 
+  // ← BEZ AdminGuard w środku!
   if (loading) {
     return (
-      <AdminGuard>
-        <div className="min-h-screen flex items-center justify-center text-zinc-500 font-bold">
-          Sprawdzanie uprawnień...
-        </div>
-      </AdminGuard>
+      <div className="min-h-screen flex items-center justify-center text-zinc-500 font-bold">
+        Sprawdzanie uprawnień...
+      </div>
     );
   }
 

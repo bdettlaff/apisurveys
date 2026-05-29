@@ -14,6 +14,12 @@ type Survey = {
   isSchoolSurvey: boolean;
 };
 
+type TokenInfo = {
+  firstUsedAt: string;
+  expiresAt: string;
+  expired: boolean;
+};
+
 type TeacherGroup = {
   teacherName: string;
   subjects: string[];
@@ -22,6 +28,75 @@ type TeacherGroup = {
   endDate: string;
   isSchoolSurvey: boolean;
 };
+
+// ── Licznik czasu sesji ───────────────────────────────────────────────────────
+
+function TokenCountdown({ tokenInfo }: { tokenInfo: TokenInfo }) {
+  const [secondsLeft, setSecondsLeft] = useState<number>(() =>
+    Math.max(
+      0,
+      Math.floor((new Date(tokenInfo.expiresAt).getTime() - Date.now()) / 1000),
+    ),
+  );
+
+  useEffect(() => {
+    if (tokenInfo.expired || secondsLeft <= 0) return;
+    const interval = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [tokenInfo.expired]);
+
+  const minutes = Math.floor(secondsLeft / 60);
+  const seconds = secondsLeft % 60;
+  const isExpired = tokenInfo.expired || secondsLeft === 0;
+  const isWarning = !isExpired && secondsLeft < 300;
+
+  if (isExpired) {
+    return (
+      <div className="mb-6 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2">
+        <span className="text-amber-500 text-sm">⚠</span>
+        <p className="text-xs font-semibold text-amber-700">
+          Sesja wygasła — możesz dokończyć wypełnianie, ale nie możesz wejść
+          ponownie tym kodem.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`mb-6 p-3 rounded-xl border flex items-center justify-between ${
+        isWarning
+          ? "bg-amber-50 border-amber-200"
+          : "bg-emerald-50 border-emerald-200"
+      }`}
+    >
+      <p
+        className={`text-xs font-semibold ${
+          isWarning ? "text-amber-700" : "text-emerald-700"
+        }`}
+      >
+        {isWarning ? "⚠ Sesja wygasa wkrótce" : "Sesja aktywna"}
+      </p>
+      <span
+        className={`font-mono font-black text-sm ${
+          isWarning ? "text-amber-800" : "text-emerald-800"
+        }`}
+      >
+        {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
+      </span>
+    </div>
+  );
+}
+
+// ── Główny komponent ──────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
   const { accounts, instance } = useMsal();
@@ -32,6 +107,7 @@ export default function DashboardPage() {
   const [codeError, setCodeError] = useState<string | null>(null);
   const [className, setClassName] = useState<string | null>(null);
   const [activeSurveys, setActiveSurveys] = useState<Survey[]>([]);
+  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [completedGroups, setCompletedGroups] = useState<number[]>([]);
   const [isLoadingStatuses, setIsLoadingStatuses] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -54,12 +130,10 @@ export default function DashboardPage() {
     if (!isAuthenticated) router.push("/");
   }, [isAuthenticated, router]);
 
-  // Grupuje ankiety nauczycielskie po nazwisku; ankiety szkolne trafiają osobno
   const groupSurveys = (surveys: Survey[]): TeacherGroup[] => {
     const map = new Map<string, TeacherGroup>();
 
     surveys.forEach((s) => {
-      // Ankieta szkolna — osobna karta, klucz unikalny po surveyId
       if (s.isSchoolSurvey) {
         map.set(`school-${s.surveyId}`, {
           teacherName: "Ocena szkoły",
@@ -72,7 +146,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // Ankieta nauczycielska — format "Jan Kowalski – Matematyka"
       const dashIdx = s.typeOrTeacher.indexOf(" – ");
       const teacherName =
         dashIdx !== -1
@@ -90,9 +163,8 @@ export default function DashboardPage() {
       }
 
       if (existing) {
-        if (subject && !existing.subjects.includes(subject)) {
+        if (subject && !existing.subjects.includes(subject))
           existing.subjects.push(subject);
-        }
         existing.surveyIds.push(s.surveyId);
       } else {
         map.set(s.surveyId.toString(), {
@@ -106,7 +178,6 @@ export default function DashboardPage() {
       }
     });
 
-    // Nauczyciele alfabetycznie, ankieta szkolna zawsze na końcu
     const teachers = Array.from(map.values())
       .filter((g) => !g.isSchoolSurvey)
       .sort((a, b) => a.teacherName.localeCompare(b.teacherName, "pl"));
@@ -155,25 +226,46 @@ export default function DashboardPage() {
     if (!accessCode.trim()) return;
     setCodeError(null);
     setIsSearching(true);
+
     try {
+      const msalToken = await getAccessToken();
+      if (!msalToken) {
+        setCodeError(
+          "Nie udało się pobrać tokena autoryzacji. Zaloguj się ponownie.",
+        );
+        setIsSearching(false);
+        return;
+      }
+
       const res = await fetch(
         `http://localhost:8080/api/admin/surveys/active/by-code/${accessCode.trim().toUpperCase()}`,
+        { headers: { Authorization: `Bearer ${msalToken}` } },
       );
+
       if (!res.ok) {
         setCodeError(
           "Nie znaleziono klasy o tym kodzie. Sprawdź kod i spróbuj ponownie.",
         );
         setActiveSurveys([]);
         setClassName(null);
+        setTokenInfo(null);
         setIsSearching(false);
         return;
       }
-      const surveys: Survey[] = await res.json();
-      setActiveSurveys(surveys);
-      setClassName(surveys.length > 0 ? surveys[0].targetClass : accessCode);
+
+      // Backend zwraca: { surveys: [...], tokenInfo: { firstUsedAt, expiresAt, expired } }
+      const data: { surveys: Survey[]; tokenInfo: TokenInfo } =
+        await res.json();
+
+      setActiveSurveys(data.surveys);
+      setTokenInfo(data.tokenInfo);
+      setClassName(
+        data.surveys.length > 0 ? data.surveys[0].targetClass : accessCode,
+      );
     } catch {
       setCodeError("Błąd połączenia z serwerem.");
     }
+
     setIsSearching(false);
   };
 
@@ -228,6 +320,9 @@ export default function DashboardPage() {
               <h2 className="font-bold text-lg mb-4 text-zinc-800">
                 Ankiety dla klasy {className}:
               </h2>
+
+              {/* Licznik sesji */}
+              {tokenInfo && <TokenCountdown tokenInfo={tokenInfo} />}
 
               {isLoadingStatuses ? (
                 <p className="text-zinc-400 text-sm italic">

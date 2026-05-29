@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useIsAuthenticated } from "@azure/msal-react";
+import { useEffect, useState } from "react";
 import { Navbar } from "../../components/Navbar/Navbar";
 import { StatsChart } from "../../components/StatsChart/StatsChart";
 import { CommentList } from "../../components/CommentList/CommentList";
 import { TeacherSelector } from "../../components/TeacherSelector/TeacherSelector";
 import { exportResultsToExcel } from "../../components/ExportToexcel/exportToExcel";
+import { useIsAuthenticated } from "@azure/msal-react";
+import { useAuthFetch } from "../../hooks/useAuthFetch";
 
 export default function SurveyResultsPage() {
   const isAuthenticated = useIsAuthenticated();
+  const authFetch = useAuthFetch();
+
   const [data, setData] = useState<any[]>([]);
   const [schoolData, setSchoolData] = useState<any | null>(null);
   const [subjects, setSubjects] = useState<string[]>(["Wszystkie przedmioty"]);
@@ -23,6 +26,8 @@ export default function SurveyResultsPage() {
   const [selectedClass, setSelectedClass] = useState("Wszystkie klasy");
 
   useEffect(() => {
+    if (!isAuthenticated) return; // ← czekaj aż użytkownik będzie zalogowany
+
     const fetchSchool = (r: Response) => {
       if (r.status === 204 || r.headers.get("content-length") === "0")
         return null;
@@ -30,12 +35,12 @@ export default function SurveyResultsPage() {
     };
 
     Promise.all([
-      fetch("http://localhost:8080/api/results/all").then((r) => r.json()),
-      fetch("http://localhost:8080/api/results/school").then(fetchSchool),
-      fetch("http://localhost:8080/api/results/subjects-list").then((r) =>
+      authFetch("http://localhost:8080/api/results/all").then((r) => r.json()),
+      authFetch("http://localhost:8080/api/results/school").then(fetchSchool),
+      authFetch("http://localhost:8080/api/results/subjects-list").then((r) =>
         r.json(),
       ),
-      fetch("http://localhost:8080/api/results/teachers-list").then((r) =>
+      authFetch("http://localhost:8080/api/results/teachers-list").then((r) =>
         r.json(),
       ),
     ])
@@ -46,7 +51,7 @@ export default function SurveyResultsPage() {
         setTeachers(teachs || []);
       })
       .catch((err) => console.error("Błąd ładowania danych:", err));
-  }, []);
+  }, [authFetch, isAuthenticated]); // ← dodane isAuthenticated
 
   const allClasses = Array.from(
     new Set([
@@ -54,8 +59,6 @@ export default function SurveyResultsPage() {
       ...(schoolData?.classNames || []),
     ]),
   ).sort();
-
-  // ── Helpery ───────────────────────────────────────────────────────────────
 
   const getStatsForDisplay = (item: any) => {
     const source =
@@ -110,8 +113,6 @@ export default function SurveyResultsPage() {
     return "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800";
   };
 
-  // ── Eksport do Excel ──────────────────────────────────────────────────────
-
   const handleExport = async () => {
     setIsExporting(true);
     try {
@@ -123,8 +124,6 @@ export default function SurveyResultsPage() {
       setIsExporting(false);
     }
   };
-
-  // ── Filtrowanie ───────────────────────────────────────────────────────────
 
   const displayedTeachers = data
     .filter((t) => {
@@ -157,8 +156,6 @@ export default function SurveyResultsPage() {
     selectedSubject === "Wszystkie przedmioty" &&
     (selectedClass === "Wszystkie klasy" ||
       (schoolData.classNames || []).includes(selectedClass));
-
-  // ── Karta nauczyciela ─────────────────────────────────────────────────────
 
   const renderTeacherCard = (item: any, key: string) => {
     const comments = getTeacherComments(item);
@@ -230,8 +227,6 @@ export default function SurveyResultsPage() {
     );
   };
 
-  // ── Karta szkolna ─────────────────────────────────────────────────────────
-
   const renderSchoolCard = () => {
     const item = schoolData;
     const votes = getTotalVotes(item);
@@ -297,7 +292,6 @@ export default function SurveyResultsPage() {
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-900 pt-28 pb-12">
       <Navbar />
       <div className="p-6 max-w-7xl mx-auto space-y-8">
-        {/* ── Filtry + przycisk eksportu ── */}
         <div className="flex flex-wrap gap-4 items-end justify-between">
           <div className="flex flex-wrap gap-4 items-end">
             <TeacherSelector
@@ -314,7 +308,6 @@ export default function SurveyResultsPage() {
               selectedTeacherId={selectedTeacherId}
               onTeacherChange={setSelectedTeacherId}
             />
-
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
                 Filtruj po klasie
@@ -334,7 +327,6 @@ export default function SurveyResultsPage() {
             </div>
           </div>
 
-          {/* Przycisk eksportu — eksportuje WSZYSTKIE dane (nie tylko przefiltrowane) */}
           {hasAnyData && (
             <button
               onClick={handleExport}
@@ -386,7 +378,6 @@ export default function SurveyResultsPage() {
           )}
         </div>
 
-        {/* ── Ankieta szkolna ── */}
         {showSchool && (
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 px-1">
@@ -396,7 +387,6 @@ export default function SurveyResultsPage() {
           </div>
         )}
 
-        {/* ── Wyniki nauczycieli ── */}
         {displayedTeachers.length > 0 && (
           <div className="space-y-6">
             {showSchool && (
