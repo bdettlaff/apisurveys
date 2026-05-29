@@ -23,9 +23,13 @@ export default function TokensPage() {
 
   useEffect(() => {
     fetch("http://localhost:8080/api/surveys")
-      .then(r => r.json()).then(setSurveys).catch(() => {});
+      .then((r) => r.json())
+      .then(setSurveys)
+      .catch(() => {});
     fetch("http://localhost:8080/api/classes")
-      .then(r => r.json()).then(setClasses).catch(() => {});
+      .then((r) => r.json())
+      .then(setClasses)
+      .catch(() => {});
   }, []);
 
   const handleGenerate = async () => {
@@ -52,8 +56,13 @@ export default function TokensPage() {
   };
 
   const handleLoadExisting = async () => {
-    if (!selectedSurvey) { alert("Wybierz ankietę!"); return; }
-    const res = await fetch(`http://localhost:8080/api/tokens/survey/${selectedSurvey}`);
+    if (!selectedSurvey) {
+      alert("Wybierz ankietę!");
+      return;
+    }
+    const res = await fetch(
+      `http://localhost:8080/api/tokens/survey/${selectedSurvey}`,
+    );
     const data = await res.json();
     setTokens(data);
   };
@@ -91,15 +100,29 @@ export default function TokensPage() {
             <div className="relative flex-1">
               <select
                 value={selectedSurvey}
-                onChange={e => setSelectedSurvey(e.target.value)}
+                onChange={(e) => setSelectedSurvey(e.target.value)}
                 className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 appearance-none cursor-pointer shadow-sm"
               >
                 <option value="">-- Wybierz ankietę --</option>
-                {surveys.map(s => <option key={s.id} value={s.id}>{s.title}</option>)}
+                {surveys.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.title}
+                  </option>
+                ))}
               </select>
               <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                  />
                 </svg>
               </div>
             </div>
@@ -107,15 +130,29 @@ export default function TokensPage() {
             <div className="relative flex-1">
               <select
                 value={selectedClass}
-                onChange={e => setSelectedClass(e.target.value)}
+                onChange={(e) => setSelectedClass(e.target.value)}
                 className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 appearance-none cursor-pointer shadow-sm"
               >
                 <option value="">-- Wybierz klasę --</option>
-                {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {classes.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
               </select>
               <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                  />
                 </svg>
               </div>
             </div>
@@ -150,22 +187,37 @@ export default function TokensPage() {
               <table className="w-full border-collapse text-left text-sm">
                 <thead>
                   <tr className="bg-zinc-50 border-b border-zinc-100">
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Uczeń</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Status</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">Token</th>
-                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 text-right">Akcja</th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">
+                      Uczeń
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500">
+                      Token
+                    </th>
+                    <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-zinc-500 text-right">
+                      Akcja
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 font-medium text-zinc-800">
-                  {tokens.map(t => (
-                    <tr key={t.id} className="hover:bg-zinc-50/60 transition-colors">
-                      <td className="px-6 py-4 text-zinc-800">{t.user.login}</td>
+                  {tokens.map((t) => (
+                    <tr
+                      key={t.id}
+                      className="hover:bg-zinc-50/60 transition-colors"
+                    >
+                      <td className="px-6 py-4 text-zinc-800">
+                        {t.user.login}
+                      </td>
                       <td className="px-6 py-4">
-                        <span className={`inline-block px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide ${
-                          t.isUsed
-                            ? "bg-red-50 border border-red-100 text-red-600"
-                            : "bg-green-50 border border-green-100 text-green-600"
-                        }`}>
+                        <span
+                          className={`inline-block px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide ${
+                            t.isUsed
+                              ? "bg-red-50 border border-red-100 text-red-600"
+                              : "bg-green-50 border border-green-100 text-green-600"
+                          }`}
+                        >
                           {t.isUsed ? "Użyty" : "Aktywny"}
                         </span>
                       </td>

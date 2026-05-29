@@ -7,17 +7,63 @@ import { InteractionStatus } from "@azure/msal-browser";
 import { Logo } from "../Logo/Logo";
 import Link from "next/link";
 
+type CurrentUser = {
+  id: number;
+  login: string;
+  role: "STUDENT" | "TEACHER" | "ADMIN";
+};
+
 export const Navbar = () => {
-  const { instance, inProgress } = useMsal();
+  const { instance, accounts, inProgress } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [dark, setDark] = useState(false);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("theme") === "dark";
     setDark(saved);
     document.documentElement.classList.toggle("dark", saved);
   }, []);
+
+  useEffect(() => {
+    const shouldFetchUser =
+      isAuthenticated &&
+      accounts.length > 0 &&
+      inProgress === InteractionStatus.None &&
+      !currentUser;
+
+    if (!shouldFetchUser) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const authResult = await instance.acquireTokenSilent({
+          scopes: ["api://d5614add-3e17-42b6-a294-fc218d0f61e6/access_as_user"],
+          account: accounts[0],
+        });
+
+        const res = await fetch("http://localhost:8080/api/v1/me", {
+          headers: {
+            Authorization: `Bearer ${authResult.accessToken}`,
+          },
+        });
+
+        if (!res.ok) return;
+
+        const data: CurrentUser = await res.json();
+        setCurrentUser(data);
+      } catch (e) {
+        console.error("Nie udało się pobrać roli w Navbar:", e);
+      }
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, accounts, inProgress, currentUser, instance]);
+
+  const isAdmin = currentUser?.role === "ADMIN";
+
+  const canManageSurveys =
+    currentUser?.role === "ADMIN" || currentUser?.role === "TEACHER";
 
   const toggleDark = () => {
     const next = !dark;
@@ -56,21 +102,45 @@ export const Navbar = () => {
 
           {isAuthenticated && (
             <div className="hidden md:flex items-center gap-6 border-l border-zinc-200 dark:border-zinc-700 pl-6">
-              <Link href="/dashboard" className="text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+              <Link
+                href="/dashboard"
+                className="text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
                 Dashboard
               </Link>
-              <Link href="/dashboard/survey-results" className="text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                Wyniki ankiet
-              </Link>
-              <Link href="/dashboard/create-survey" className="text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                Stwórz ankietę
-              </Link>
-              <Link href="/admin/questions" className="text-sm font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 transition-colors bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 rounded-lg border border-amber-200/60 dark:border-amber-800/60">
-                Pytania (Admin)
-              </Link>
-              <Link href="/admin/surveys" className="text-sm font-bold text-green-600 dark:text-green-400 hover:text-green-700 transition-colors bg-green-50 dark:bg-green-900/30 px-2.5 py-1 rounded-lg border border-green-200/60 dark:border-green-800/60">
-                Aktywne ankiety
-              </Link>
+              {canManageSurveys && (
+                <>
+                  <Link
+                    href="/dashboard/survey-results"
+                    className="text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Wyniki ankiet
+                  </Link>
+
+                  <Link
+                    href="/dashboard/create-survey"
+                    className="text-sm font-bold text-zinc-600 dark:text-zinc-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    Stwórz ankietę
+                  </Link>
+                </>
+              )}
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/admin/questions"
+                    className="text-sm font-bold text-amber-600 dark:text-amber-400 hover:text-amber-700 transition-colors bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 rounded-lg border border-amber-200/60 dark:border-amber-800/60"
+                  >
+                    Pytania (Admin)
+                  </Link>
+                  <Link
+                    href="/admin/surveys"
+                    className="text-sm font-bold text-green-600 dark:text-green-400 hover:text-green-700 transition-colors bg-green-50 dark:bg-green-900/30 px-2.5 py-1 rounded-lg border border-green-200/60 dark:border-green-800/60"
+                  >
+                    Aktywne ankiety
+                  </Link>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -79,9 +149,18 @@ export const Navbar = () => {
           className="md:hidden p-2 text-zinc-600 dark:text-zinc-300"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"} />
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16m-7 6h7"}
+            />
           </svg>
         </button>
 
@@ -118,11 +197,50 @@ export const Navbar = () => {
         <div className="md:hidden absolute top-20 left-0 w-full bg-white dark:bg-zinc-900 border-b border-zinc-100 dark:border-zinc-800 p-4 flex flex-col gap-4 shadow-xl">
           {isAuthenticated && (
             <>
-              <Link href="/dashboard" className="text-sm font-bold text-zinc-600 dark:text-zinc-300 p-2" onClick={() => setIsMenuOpen(false)}>Dashboard</Link>
-              <Link href="/dashboard/survey-results" className="text-sm font-bold text-zinc-600 dark:text-zinc-300 p-2" onClick={() => setIsMenuOpen(false)}>Wyniki ankiet</Link>
-              <Link href="/dashboard/create-survey" className="text-sm font-bold text-zinc-600 dark:text-zinc-300 p-2" onClick={() => setIsMenuOpen(false)}>Stwórz ankietę</Link>
-              <Link href="/admin/questions" className="text-sm font-bold text-amber-600 dark:text-amber-400 p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-100 dark:border-amber-800/60" onClick={() => setIsMenuOpen(false)}>Pytania (Admin)</Link>
-              <Link href="/admin/surveys" className="text-sm font-bold text-green-600 dark:text-green-400 p-2 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-100 dark:border-green-800/60" onClick={() => setIsMenuOpen(false)}>Aktywne ankiety</Link>
+              <Link
+                href="/dashboard"
+                className="text-sm font-bold text-zinc-600 dark:text-zinc-300 p-2"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Dashboard
+              </Link>
+              {canManageSurveys && (
+                <>
+                  <Link
+                    href="/dashboard/survey-results"
+                    className="text-sm font-bold text-zinc-600 dark:text-zinc-300 p-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Wyniki ankiet
+                  </Link>
+
+                  <Link
+                    href="/dashboard/create-survey"
+                    className="text-sm font-bold text-zinc-600 dark:text-zinc-300 p-2"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Stwórz ankietę
+                  </Link>
+                </>
+              )}
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/admin/questions"
+                    className="text-sm font-bold text-amber-600 dark:text-amber-400 p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg border border-amber-100 dark:border-amber-800/60"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Pytania (Admin)
+                  </Link>
+                  <Link
+                    href="/admin/surveys"
+                    className="text-sm font-bold text-green-600 dark:text-green-400 p-2 bg-green-50 dark:bg-green-900/30 rounded-lg border border-green-100 dark:border-green-800/60"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Aktywne ankiety
+                  </Link>
+                </>
+              )}
             </>
           )}
 
@@ -134,11 +252,17 @@ export const Navbar = () => {
           </button>
 
           {!isAuthenticated ? (
-            <button onClick={handleLogin} className="w-full px-5 py-3 bg-tau-dark text-white rounded-xl text-sm font-bold">
+            <button
+              onClick={handleLogin}
+              className="w-full px-5 py-3 bg-tau-dark text-white rounded-xl text-sm font-bold"
+            >
               Zaloguj się
             </button>
           ) : (
-            <button onClick={handleLogout} className="w-full px-5 py-3 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-xl text-sm font-bold">
+            <button
+              onClick={handleLogout}
+              className="w-full px-5 py-3 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 rounded-xl text-sm font-bold"
+            >
               Wyloguj
             </button>
           )}

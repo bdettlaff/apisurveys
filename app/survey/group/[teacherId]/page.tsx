@@ -8,6 +8,7 @@ import { Navbar } from "../../../components/Navbar/Navbar";
 type QuestionDTO = {
   id: string;
   content: string;
+  type?: string;
 };
 
 type SurveySection = {
@@ -41,21 +42,19 @@ const COMMON_QUESTION_IDS = new Set([
 ]);
 const SCHOOL_QUESTION_IDS = new Set(["B1", "B2", "B3", "B+"]);
 const OPTIONAL_QUESTION_IDS = new Set(["A+", "A-", "B+"]);
-const TEXT_QUESTION_IDS = new Set(["A+", "A-", "B+"]);
-// B3 ma specjalny render — wielokrotny wybór przedmiotów
-const MULTI_CHOICE_QUESTION_IDS = new Set(["B3"]);
 
-type SharedSpecificQuestion = {
-  question: QuestionDTO;
-  surveyIds: number[];
+const isOpenQuestion = (q: QuestionDTO): boolean => {
+  if (q.type === "OPEN") return true;
+  if (q.type === "SCALE") return false;
+  return OPTIONAL_QUESTION_IDS.has(q.id);
 };
 
+type SharedSpecificQuestion = { question: QuestionDTO; surveyIds: number[] };
 type UniqueSection = {
   surveyId: number;
   subjectName: string;
   questions: QuestionDTO[];
 };
-
 type SurveyStatus =
   | { type: "not_started"; startDate: Date }
   | { type: "expired"; endDate: Date }
@@ -102,12 +101,9 @@ export default function GroupSurveyPage() {
     Record<number, Record<string, any>>
   >({});
   const [schoolAnswers, setSchoolAnswers] = useState<Record<string, any>>({});
-  // B3 — wielokrotny wybór przedmiotów, Set wybranych nazw
   const [b3Selected, setB3Selected] = useState<Set<string>>(new Set());
   const [b3NoneSelected, setB3NoneSelected] = useState(false);
-  // Lista przedmiotów dla B3 — ładowana osobno po accessCode
   const [fetchedSubjects, setFetchedSubjects] = useState<string[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -150,7 +146,6 @@ export default function GroupSurveyPage() {
     loadGroup();
   }, [firstSurveyId, accessCode, accounts, getAccessToken]);
 
-  // Pobierz listę przedmiotów dla B3 po accessCode
   useEffect(() => {
     if (!accessCode) return;
     fetch(`http://localhost:8080/api/classes/subjects-by-code/${accessCode}`)
@@ -190,7 +185,6 @@ export default function GroupSurveyPage() {
         !s.questions.every((q) => SCHOOL_QUESTION_IDS.has(q.id)),
     );
 
-    // Lista unikalnych przedmiotów z sekcji nauczycielskich — do B3
     const subjects = Array.from(
       new Set(teacherSections.map((s) => s.subjectName).filter(Boolean)),
     ).sort((a, b) => a.localeCompare(b, "pl"));
@@ -257,7 +251,6 @@ export default function GroupSurveyPage() {
     return parseSurveyStatus(group.startDate, group.endDate);
   }, [group]);
 
-  // B3 jest wymagane — musi być coś zaznaczone (przedmiot lub "żaden")
   const isB3Complete = b3NoneSelected || b3Selected.size > 0;
 
   const isFormComplete = useCallback(() => {
@@ -278,7 +271,6 @@ export default function GroupSurveyPage() {
           uniqueAnswers[s.surveyId]?.[q.id] !== undefined,
       ),
     );
-    // Sekcja szkolna — B3 osobno, reszta normalnie
     const schoolOk =
       !schoolSection ||
       schoolSection.questions.every((q) => {
@@ -320,7 +312,6 @@ export default function GroupSurveyPage() {
       return next;
     });
   };
-
   const toggleB3None = () => {
     setB3NoneSelected((prev) => !prev);
     setB3Selected(new Set());
@@ -330,10 +321,8 @@ export default function GroupSurveyPage() {
     setShowConfirmModal(false);
     setSubmitting(true);
     setErrorMsg(null);
-
     try {
       const token = await getAccessToken();
-
       const teacherPayload: Record<number, Record<string, any>> = {};
       teacherSectionIds.forEach((surveyId, index) => {
         const isFirst = index === 0;
@@ -349,18 +338,15 @@ export default function GroupSurveyPage() {
           : { ...sharedForThis, ...uniqueForThis };
       });
 
-      // B3 — zapisz jako string z przecinkami lub "żaden"
       const b3Value = b3NoneSelected
         ? "żaden"
         : Array.from(b3Selected).join(", ");
-
       const schoolPayload: Record<number, Record<string, any>> = {};
-      if (schoolSection) {
+      if (schoolSection)
         schoolPayload[schoolSection.surveyId] = {
           ...schoolAnswers,
           B3: b3Value,
         };
-      }
 
       const response = await fetch(
         `http://localhost:8080/api/surveys/group/submit`,
@@ -389,7 +375,6 @@ export default function GroupSurveyPage() {
 
   let _counter = 0;
 
-  // Render B3 — wielokrotny wybór przedmiotów
   const renderB3Question = (q: QuestionDTO) => {
     _counter++;
     const idx = _counter;
@@ -420,7 +405,6 @@ export default function GroupSurveyPage() {
               );
             },
           )}
-          {/* Opcja "Żaden" */}
           <button
             onClick={toggleB3None}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
@@ -446,13 +430,12 @@ export default function GroupSurveyPage() {
     currentAnswer: any,
     onAnswer: (value: any) => void,
   ) => {
-    // B3 ma osobny renderer
     if (q.id === "B3") return renderB3Question(q);
 
     _counter++;
     const idx = _counter;
     const isOptional = OPTIONAL_QUESTION_IDS.has(q.id);
-    const isText = TEXT_QUESTION_IDS.has(q.id);
+    const isOpen = isOpenQuestion(q);
 
     return (
       <div key={q.id} className="pb-6 border-b border-zinc-100 last:border-0">
@@ -469,30 +452,39 @@ export default function GroupSurveyPage() {
             )}
           </p>
         </div>
-        {isText ? (
-          <textarea
-            className="w-full p-4 border border-zinc-200 rounded-xl bg-zinc-50 focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm ml-11"
-            placeholder="Wpisz swoją odpowiedź (opcjonalnie)..."
-            value={currentAnswer || ""}
-            onChange={(e) => onAnswer(e.target.value)}
-          />
-        ) : (
-          <div className="flex flex-wrap gap-1.5 sm:gap-2 pl-11">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
-              <button
-                key={r}
-                onClick={() => onAnswer(r)}
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full font-bold text-sm transition-all ${
-                  currentAnswer === r
-                    ? "bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-200"
-                    : "bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
-                }`}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
-        )}
+
+        {/* Wcięcie wyrównane z tekstem pytania (pl-11 = 2.75rem = szerokość numeru + gap) */}
+        <div className="pl-11">
+          {isOpen ? (
+            <textarea
+              className="w-full p-4 border border-zinc-200 rounded-xl bg-zinc-50 focus:ring-2 focus:ring-indigo-500 outline-none transition text-sm resize-none"
+              rows={3}
+              placeholder={
+                isOptional
+                  ? "Wpisz swoją odpowiedź (opcjonalnie)..."
+                  : "Wpisz swoją odpowiedź..."
+              }
+              value={currentAnswer || ""}
+              onChange={(e) => onAnswer(e.target.value || undefined)}
+            />
+          ) : (
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
+                <button
+                  key={r}
+                  onClick={() => onAnswer(r)}
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full font-bold text-sm transition-all ${
+                    currentAnswer === r
+                      ? "bg-indigo-600 text-white scale-110 shadow-lg shadow-indigo-200"
+                      : "bg-zinc-100 hover:bg-zinc-200 text-zinc-700"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -619,7 +611,6 @@ export default function GroupSurveyPage() {
           </p>
 
           <div className="space-y-10">
-            {/* 1. Pytania ogólne */}
             {commonQuestions.length > 0 && (
               <div>
                 {renderSectionHeader("Pytania ogólne", "zinc")}
@@ -633,7 +624,6 @@ export default function GroupSurveyPage() {
               </div>
             )}
 
-            {/* 2. Pytania specjalistyczne współdzielone */}
             {sharedSpecificQuestions.length > 0 && (
               <div>
                 {renderSectionHeader("Pytania przedmiotowe", "indigo")}
@@ -649,7 +639,6 @@ export default function GroupSurveyPage() {
               </div>
             )}
 
-            {/* 3. Pytania unikalne per przedmiot */}
             {uniqueSections.map((section) => (
               <div key={section.surveyId}>
                 {renderSectionHeader(section.subjectName, "indigo")}
@@ -665,7 +654,6 @@ export default function GroupSurveyPage() {
               </div>
             ))}
 
-            {/* 4. Sekcja szkolna B */}
             {schoolSection && schoolSection.questions.length > 0 && (
               <div>
                 <div className="flex items-center gap-3 mb-2">
@@ -710,7 +698,6 @@ export default function GroupSurveyPage() {
         </div>
       </main>
 
-      {/* Modal potwierdzenia */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-zinc-200">
@@ -743,7 +730,6 @@ export default function GroupSurveyPage() {
         </div>
       )}
 
-      {/* Modal sukcesu */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-zinc-200">
@@ -769,7 +755,6 @@ export default function GroupSurveyPage() {
         </div>
       )}
 
-      {/* Modal już wypełniono */}
       {showAlreadyModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-zinc-200">

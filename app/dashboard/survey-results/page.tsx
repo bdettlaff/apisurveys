@@ -6,6 +6,7 @@ import { Navbar } from "../../components/Navbar/Navbar";
 import { StatsChart } from "../../components/StatsChart/StatsChart";
 import { CommentList } from "../../components/CommentList/CommentList";
 import { TeacherSelector } from "../../components/TeacherSelector/TeacherSelector";
+import { exportResultsToExcel } from "../../components/ExportToexcel/exportToExcel";
 
 export default function SurveyResultsPage() {
   const isAuthenticated = useIsAuthenticated();
@@ -13,6 +14,7 @@ export default function SurveyResultsPage() {
   const [schoolData, setSchoolData] = useState<any | null>(null);
   const [subjects, setSubjects] = useState<string[]>(["Wszystkie przedmioty"]);
   const [teachers, setTeachers] = useState<any[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [selectedSubject, setSelectedSubject] = useState(
     "Wszystkie przedmioty",
@@ -75,7 +77,6 @@ export default function SurveyResultsPage() {
     return item.totalVotesPerClass?.[selectedClass] ?? 0;
   };
 
-  // Komentarze nauczycielskie (A+/A-) — do CommentList po prawej
   const getTeacherComments = (item: any) => {
     const list =
       selectedClass === "Wszystkie klasy"
@@ -84,7 +85,6 @@ export default function SurveyResultsPage() {
     return list.filter((c: any) => c.type !== "SCHOOL_OPEN");
   };
 
-  // Komentarze szkolne (B+/B3) — do osobnej sekcji pod wykresem
   const getSchoolOpenComments = (item: any) => {
     const list =
       selectedClass === "Wszystkie klasy"
@@ -108,6 +108,20 @@ export default function SurveyResultsPage() {
     if (avg >= 4)
       return "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800";
     return "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800";
+  };
+
+  // ── Eksport do Excel ──────────────────────────────────────────────────────
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const schoolArray = schoolData ? [schoolData] : [];
+      exportResultsToExcel(data, schoolArray);
+    } catch (err) {
+      console.error("Błąd eksportu:", err);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // ── Filtrowanie ───────────────────────────────────────────────────────────
@@ -244,7 +258,6 @@ export default function SurveyResultsPage() {
             </div>
           )}
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <StatsChart
@@ -268,8 +281,6 @@ export default function SurveyResultsPage() {
     );
   };
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   if (!isAuthenticated)
     return (
       <div className="p-10 text-center dark:text-zinc-100">
@@ -278,45 +289,101 @@ export default function SurveyResultsPage() {
     );
 
   const hasAnything = showSchool || displayedTeachers.length > 0;
+  const hasAnyData =
+    data.some((t) => (t.totalVotes ?? 0) > 0) ||
+    (schoolData && (schoolData.totalVotes ?? 0) > 0);
 
   return (
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-900 pt-28 pb-12">
       <Navbar />
       <div className="p-6 max-w-7xl mx-auto space-y-8">
-        {/* ── Filtry ── */}
-        <div className="flex flex-wrap gap-4 items-end">
-          <TeacherSelector
-            subjects={subjects}
-            selectedSubject={selectedSubject}
-            onSubjectChange={(v) => {
-              setSelectedSubject(v);
-              setSelectedTeacherId("all");
-            }}
-            teachers={teachers.map((t) => ({
-              teacherId: String(t.id),
-              teacherName: `${t.firstName} ${t.lastName}`,
-            }))}
-            selectedTeacherId={selectedTeacherId}
-            onTeacherChange={setSelectedTeacherId}
-          />
+        {/* ── Filtry + przycisk eksportu ── */}
+        <div className="flex flex-wrap gap-4 items-end justify-between">
+          <div className="flex flex-wrap gap-4 items-end">
+            <TeacherSelector
+              subjects={subjects}
+              selectedSubject={selectedSubject}
+              onSubjectChange={(v) => {
+                setSelectedSubject(v);
+                setSelectedTeacherId("all");
+              }}
+              teachers={teachers.map((t) => ({
+                teacherId: String(t.id),
+                teacherName: `${t.firstName} ${t.lastName}`,
+              }))}
+              selectedTeacherId={selectedTeacherId}
+              onTeacherChange={setSelectedTeacherId}
+            />
 
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
-              Filtruj po klasie
-            </label>
-            <select
-              className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 dark:text-zinc-100 shadow-sm min-w-[200px]"
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-            >
-              <option value="Wszystkie klasy">Wszystkie klasy</option>
-              {allClasses.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">
+                Filtruj po klasie
+              </label>
+              <select
+                className="p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 dark:text-zinc-100 shadow-sm min-w-[200px]"
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+              >
+                <option value="Wszystkie klasy">Wszystkie klasy</option>
+                {allClasses.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+
+          {/* Przycisk eksportu — eksportuje WSZYSTKIE dane (nie tylko przefiltrowane) */}
+          {hasAnyData && (
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-300 text-white rounded-xl text-sm font-bold transition-colors whitespace-nowrap"
+            >
+              {isExporting ? (
+                <>
+                  <svg
+                    className="animate-spin w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    />
+                  </svg>
+                  Eksportowanie...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                    />
+                  </svg>
+                  Eksportuj do Excel
+                </>
+              )}
+            </button>
+          )}
         </div>
 
         {/* ── Ankieta szkolna ── */}
@@ -346,7 +413,6 @@ export default function SurveyResultsPage() {
           </div>
         )}
 
-        {/* ── Brak wyników ── */}
         {!hasAnything && (
           <div className="text-center py-20 text-zinc-400">
             Brak wyników spełniających kryteria.

@@ -4,56 +4,57 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Navbar } from "../../../components/Navbar/Navbar";
 
-type Category = {
-  id: number;
-  name: string;
-};
+type Category = { id: number; name: string };
+type SchoolClass = { id: number; name: string };
+
+const safeFetch = (url: string) =>
+  fetch(url).then((r) => {
+    if (!r.ok || r.status === 204) return [];
+    const ct = r.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return [];
+    return r.json().catch(() => []);
+  });
 
 export default function EditQuestionPage() {
   const router = useRouter();
   const { id } = useParams();
+
   const [categories, setCategories] = useState<Category[]>([]);
+  const [classes, setClasses] = useState<SchoolClass[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [form, setForm] = useState({
     content: "",
     type: "SCALE",
-    module: "",
     classRequirement: "",
     categoryId: "",
   });
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/categories")
-      .then((res) => res.json())
-      .then((data) => setCategories(data))
-      .catch((err) => console.error("Błąd ładowania kategorii:", err));
+    safeFetch("http://localhost:8080/api/categories").then(setCategories);
+    safeFetch("http://localhost:8080/api/classes").then(setClasses);
 
     if (id) {
-      fetch(`http://localhost:8080/api/questions/${id}`)
-        .then((res) => res.json())
-        .then((data) => {
+      safeFetch(`http://localhost:8080/api/questions/${id}`).then((data) => {
+        if (data && data.content !== undefined) {
           setForm({
             content: data.content,
-            type: data.type,
-            module: data.module ?? "",
+            type: data.type ?? "SCALE",
             classRequirement: data.classRequirement ?? "",
             categoryId: data.category?.id?.toString() ?? "",
           });
-        })
-        .catch((err) => console.error("Błąd ładowania pytania:", err));
+        }
+      });
     }
   }, [id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.content || !form.categoryId) {
       alert("Wypełnij treść pytania i wybierz kategorię!");
       return;
     }
-
     setIsSubmitting(true);
-
     try {
       const response = await fetch(
         `http://localhost:8080/api/questions/${id}`,
@@ -63,13 +64,12 @@ export default function EditQuestionPage() {
           body: JSON.stringify({
             content: form.content,
             type: form.type,
-            module: form.module,
-            classRequirement: form.classRequirement,
+            module: null,
+            classRequirement: form.classRequirement || null,
             category: { id: Number(form.categoryId) },
           }),
         },
       );
-
       if (response.ok) {
         router.push("/admin/questions");
       } else {
@@ -82,12 +82,29 @@ export default function EditQuestionPage() {
     }
   };
 
+  const SelectArrow = () => (
+    <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+        />
+      </svg>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-zinc-50 antialiased text-zinc-900 selection:bg-zinc-200">
       <Navbar />
-
       <main className="max-w-3xl mx-auto px-4 pt-32 pb-16">
-        <div className="mb-8 text-left">
+        <div className="mb-8">
           <h1 className="text-3xl font-black tracking-tight uppercase text-zinc-900">
             Edycja Pytania
           </h1>
@@ -96,8 +113,9 @@ export default function EditQuestionPage() {
           </p>
         </div>
 
-        <div className="bg-white border border-zinc-200/60 rounded-2xl p-6 md:p-10 shadow-sm transition-all">
+        <div className="bg-white border border-zinc-200/60 rounded-2xl p-6 md:p-10 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Treść */}
             <div className="flex flex-col">
               <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2">
                 Treść pytania
@@ -111,6 +129,7 @@ export default function EditQuestionPage() {
               />
             </div>
 
+            {/* Typ + Kategoria */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col">
                 <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2">
@@ -122,24 +141,10 @@ export default function EditQuestionPage() {
                     onChange={(e) => setForm({ ...form, type: e.target.value })}
                     className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm bg-zinc-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 appearance-none cursor-pointer"
                   >
-                    <option value="SCALE">Skala 1–5</option>
+                    <option value="SCALE">Skala 1–10</option>
                     <option value="OPEN">Pytanie otwarte</option>
                   </select>
-                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                      />
-                    </svg>
-                  </div>
+                  <SelectArrow />
                 </div>
               </div>
 
@@ -162,55 +167,43 @@ export default function EditQuestionPage() {
                       </option>
                     ))}
                   </select>
-                  <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none text-zinc-400">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                      />
-                    </svg>
-                  </div>
+                  <SelectArrow />
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="flex flex-col">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                  Moduł systemu
-                </label>
-                <input
-                  type="text"
-                  value={form.module}
-                  onChange={(e) => setForm({ ...form, module: e.target.value })}
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 bg-zinc-50/50 focus:bg-white placeholder:text-zinc-400"
-                  placeholder="np. Przedmioty Zawodowe"
-                />
-              </div>
-
-              <div className="flex flex-col">
-                <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2">
-                  Wymagania klasy
-                </label>
-                <input
-                  type="text"
+            {/* Przypisanie do klasy */}
+            <div className="flex flex-col">
+              <label className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2">
+                Przypisanie do klasy
+              </label>
+              <div className="relative">
+                <select
                   value={form.classRequirement}
                   onChange={(e) =>
                     setForm({ ...form, classRequirement: e.target.value })
                   }
-                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 bg-zinc-50/50 focus:bg-white placeholder:text-zinc-400"
-                  placeholder="np. technikum / liceum"
-                />
+                  className="w-full px-4 py-3 border border-zinc-200 rounded-xl text-sm bg-zinc-50/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-zinc-800 transition-all font-medium text-zinc-800 appearance-none cursor-pointer"
+                >
+                  <option value="">
+                    -- Brak (pytanie ogólne dla wszystkich klas) --
+                  </option>
+                  {classes.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                <SelectArrow />
               </div>
+              <p className="text-[11px] text-zinc-400 mt-1.5 font-medium">
+                Pytania ogólne (bez przypisania) trafiają do każdego bloku
+                ankiety. Pytania przypisane do klasy pojawiają się tylko w
+                ankietach tej klasy.
+              </p>
             </div>
 
+            {/* Przyciski */}
             <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-3 pt-6 border-t border-zinc-100">
               <button
                 type="button"
