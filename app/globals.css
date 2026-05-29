@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 @theme {
   --color-tau-yellow: #ffcd29;
   --color-tau-blue: #002d5a;

@@ -1,4 +1,5 @@
 import { Configuration, LogLevel } from "@azure/msal-browser";
+import { InteractionStatus } from "@azure/msal-browser";
 
 const AZURE_LOGIN_URL = "https://login.microsoftonline.com";
 
