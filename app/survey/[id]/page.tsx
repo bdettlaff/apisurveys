@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMsal } from "@azure/msal-react";
 import { Navbar } from "../../components/Navbar/Navbar";
-import { apiFetch } from '@/lib/api'
+import { API_URL } from '@/lib/api'
 
 export default function FillSurveyPage() {
   const params = useParams();

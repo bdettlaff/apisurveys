@@ -8,7 +8,7 @@ import { TeacherSelector } from "../../components/TeacherSelector/TeacherSelecto
 import { exportResultsToExcel } from "../../components/ExportToexcel/exportToExcel";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
-import { apiFetch } from '@/lib/api'
+import { API_URL } from '@/lib/api'
 
 export default function SurveyResultsPage() {
   const isAuthenticated = useIsAuthenticated();

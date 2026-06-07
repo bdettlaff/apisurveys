@@ -6,7 +6,7 @@ import { Navbar } from "../../../components/Navbar/Navbar";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../../hooks/useAuthFetch";
 import AdminGuard from "../../../components/AdminGuard/AdminGuard";
-import { apiFetch } from '@/lib/api'
+import { API_URL } from '@/lib/api'
 
 type Category = { id: number; name: string };
 type SchoolClass = { id: number; name: string };

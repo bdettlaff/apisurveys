@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiFetch } from '@/lib/api'
+import { API_URL } from '@/lib/api'
 
 interface Teacher {
   id: number;
