@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { InteractionStatus } from "@azure/msal-browser";
 import { useRouter } from "next/navigation";
-import { API_URL } from '../../../lib/api'
+import { API_URL } from '@/lib/api'
 
 type CurrentUser = {
   id: number;

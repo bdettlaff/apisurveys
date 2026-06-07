@@ -6,7 +6,7 @@ import { loginRequest } from "@/authConfig";
 import { InteractionStatus } from "@azure/msal-browser";
 import { Logo } from "../Logo/Logo";
 import Link from "next/link";
-import { API_URL } from '../../../lib/api'
+import { API_URL } from '@/lib/api'
 
 type CurrentUser = {
   id: number;
