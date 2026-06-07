@@ -35,12 +35,12 @@ export default function QuestionsPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    authFetch("/api/questions")
+    authFetch(`${API_URL}/api/questions`)
       .then((res) => res.json())
       .then((data) => setQuestions(data))
       .catch((err) => console.error("Błąd pobierania pytań:", err));
 
-    authFetch("/api/categories")
+    authFetch(`${API_URL}/api/categories`)
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch((err) => console.error("Błąd pobierania kategorii:", err));

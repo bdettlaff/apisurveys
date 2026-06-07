@@ -38,7 +38,7 @@ export default function AdminGuard({
           account: accounts[0],
         });
 
-        const res = await fetch("/api/v1/me", {
+        const res = await fetch(`${API_URL}/api/v1/me`, {
           headers: {
             Authorization: `Bearer ${authResult.accessToken}`,
           },

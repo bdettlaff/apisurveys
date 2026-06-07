@@ -33,7 +33,7 @@ export default function SurveyForm({ classId }: { classId: number }) {
       setCompletedBlocks([]); 
       try {
         const res = await fetch(
-          `/api/classes/${classId}/blocks`,
+          `${API_URL}/api/classes/${classId}/blocks`,
         );
         const data = await res.json();
         setBlocks(data);

@@ -28,7 +28,7 @@ export default function ActiveSurveysPage() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    authFetch("/api/admin/surveys/active")
+    authFetch(`${API_URL}/api/admin/surveys/active`)
       .then((res) => {
         if (!res.ok) throw new Error("Nie udało się pobrać danych");
         return res.json();

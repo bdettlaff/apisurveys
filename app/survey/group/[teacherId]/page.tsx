@@ -127,7 +127,7 @@ export default function GroupSurveyPage() {
       try {
         const token = await getAccessToken();
         const res = await fetch(
-          `/api/surveys/group/${firstSurveyId}?ids=${surveyIds.join(",")}&code=${accessCode}`,
+          `${API_URL}/api/surveys/group/${firstSurveyId}?ids=${surveyIds.join(",")}&code=${accessCode}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (!res.ok) throw new Error(`Błąd API: ${res.status}`);
@@ -149,7 +149,7 @@ export default function GroupSurveyPage() {
 
   useEffect(() => {
     if (!accessCode) return;
-    fetch(`/api/classes/subjects-by-code/${accessCode}`)
+    fetch(`${API_URL}/api/classes/subjects-by-code/${accessCode}`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data: string[]) => setFetchedSubjects(data))
       .catch(() => setFetchedSubjects([]));
@@ -350,7 +350,7 @@ export default function GroupSurveyPage() {
         };
 
       const response = await fetch(
-        `/api/surveys/group/submit`,
+        `${API_URL}/api/surveys/group/submit`,
         {
           method: "POST",
           headers: {

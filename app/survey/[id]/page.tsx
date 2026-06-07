@@ -39,7 +39,7 @@ export default function FillSurveyPage() {
       try {
         const token = await getAccessToken();
         const res = await fetch(
-          `/api/surveys/${id}/questions`,
+          `${API_URL}/api/surveys/${id}/questions`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!res.ok) throw new Error(`Błąd API: ${res.status}`);
@@ -62,7 +62,7 @@ export default function FillSurveyPage() {
     try {
       const token = await getAccessToken();
       const response = await fetch(
-        `/api/surveys/${id}/submit`,
+        `${API_URL}/api/surveys/${id}/submit`,
         {
           method: "POST",
           headers: {

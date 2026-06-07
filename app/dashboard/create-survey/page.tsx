@@ -47,7 +47,7 @@ export default function CreateSurveyPage() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    authFetch("/api/classes")
+    authFetch("${API_URL}/api/classes")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setClasses(data))
       .catch(() => setClasses([]));
@@ -60,7 +60,7 @@ export default function CreateSurveyPage() {
       setSelectedQuestionsPerBlock({});
       setGeneratedCode(null);
     } else {
-      authFetch(`/api/classes/${classId}/survey-blocks`)
+      authFetch(`${API_URL}/api/classes/${classId}/survey-blocks`)
         .then((res) => (res.ok ? res.json() : []))
         .then((data: SurveyBlock[]) => {
           setBlocks(data);
@@ -136,7 +136,7 @@ export default function CreateSurveyPage() {
 
     try {
       const response = await authFetch(
-        "/api/admin/surveys/composite",
+        "${API_URL}/api/admin/surveys/composite",
         {
           method: "POST",
           body: JSON.stringify({

@@ -31,18 +31,18 @@ export default function EditQuestionPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    authFetch("/api/categories")
+    authFetch(`${API_URL}/api/categories`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setCategories)
       .catch(() => setCategories([]));
 
-    authFetch("/api/classes")
+    authFetch(`${API_URL}api/classes`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setClasses)
       .catch(() => setClasses([]));
 
     if (id) {
-      authFetch(`/api/questions/${id}`)
+      authFetch(`${API_URL}/api/questions/${id}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (data && data.content !== undefined) {
@@ -67,7 +67,7 @@ export default function EditQuestionPage() {
     setIsSubmitting(true);
     try {
       const response = await authFetch(
-        `/api/questions/${id}`,
+        `${API_URL}/api/questions/${id}`,
         {
           method: "PUT",
           body: JSON.stringify({

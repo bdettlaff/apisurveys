@@ -36,12 +36,12 @@ export default function SurveyResultsPage() {
     };
 
     Promise.all([
-      authFetch("/api/results/all").then((r) => r.json()),
-      authFetch("/api/results/school").then(fetchSchool),
-      authFetch("/api/results/subjects-list").then((r) =>
+      authFetch(`${API_URL}/api/results/all`).then((r) => r.json()),
+      authFetch(`${API_URL}/api/results/school`).then(fetchSchool),
+      authFetch(`${API_URL}/api/results/subjects-list`).then((r) =>
         r.json(),
       ),
-      authFetch("/api/results/teachers-list").then((r) =>
+      authFetch(`${API_URL}/api/results/teachers-list`).then((r) =>
         r.json(),
       ),
     ])
