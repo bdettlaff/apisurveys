@@ -136,7 +136,7 @@ export default function CreateSurveyPage() {
 
     try {
       const response = await authFetch(
-        "${API_URL}/api/admin/surveys/composite",
+        `${API_URL}/api/admin/surveys/composite`,
         {
           method: "POST",
           body: JSON.stringify({
