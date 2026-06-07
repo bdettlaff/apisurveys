@@ -360,7 +360,7 @@ export default function DashboardPage() {
                           </div>
                         ) : (
 
-                            href={`/survey/group/${group.surveyIds[0]}?code=${accessCode}&ids=${group.surveyIds.join(",")}`}
+                            <a href={`/survey/group/${group.surveyIds[0]}?code=${accessCode}&ids=${group.surveyIds.join(",")}`}
                             className={`px-4 py-2 text-white rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
                               group.isSchoolSurvey
                                 ? "bg-emerald-600 hover:bg-emerald-700"
