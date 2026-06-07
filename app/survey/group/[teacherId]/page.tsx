@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMsal } from "@azure/msal-react";
 import { Navbar } from "../../../components/Navbar/Navbar";
-import { API_URL } from '@/lib/api'
+import { API_URL } from '../../../lib/api'
 
 type QuestionDTO = {
   id: string;

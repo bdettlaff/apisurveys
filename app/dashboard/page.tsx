@@ -4,7 +4,7 @@ import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { Navbar } from "../components/Navbar/Navbar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import { API_URL } from '@/lib/api'
+import { API_URL } from '../../../lib/api'
 
 type Survey = {
   surveyId: number;

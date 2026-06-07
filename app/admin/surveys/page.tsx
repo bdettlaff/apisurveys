@@ -5,7 +5,7 @@ import { Navbar } from "../../components/Navbar/Navbar";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
 import AdminGuard from "../../components/AdminGuard/AdminGuard";
-import { API_URL } from '@/lib/api'
+import { API_URL } from '../../../lib/api'
 
 interface ActiveSurvey {
   surveyId: number;
