@@ -147,13 +147,23 @@ export default function GroupSurveyPage() {
     loadGroup();
   }, [firstSurveyId, accessCode, accounts, getAccessToken]);
 
-  useEffect(() => {
-    if (!accessCode) return;
-    fetch(`${API_URL}/api/classes/subjects-by-code/${accessCode}`)
+useEffect(() => {
+  if (!accessCode) return;
+
+  instance.acquireTokenSilent({
+    scopes: ["api://d5614add-3e17-42b6-a294-fc218d0f61e6/access_as_user"],
+    account: accounts[0],
+  }).then((authResult) => {
+    fetch(`${API_URL}/api/classes/subjects-by-code/${accessCode}`, {
+      headers: {
+        Authorization: `Bearer ${authResult.accessToken}`,
+      },
+    })
       .then((res) => (res.ok ? res.json() : []))
       .then((data: string[]) => setFetchedSubjects(data))
       .catch(() => setFetchedSubjects([]));
-  }, [accessCode]);
+  });
+}, [accessCode, instance, accounts]);
 
   const {
     commonQuestions,
