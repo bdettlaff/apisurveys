@@ -205,7 +205,7 @@ export default function DashboardPage() {
       const promises = groups.map(async (g) => {
         try {
           const res = await fetch(
-            `${API_URL}/api/surveys/group/${g.surveyIds[0]}/is-completed?ids=${g.surveyIds.join(",")}`,
+            `/api/surveys/group/${g.surveyIds[0]}/is-completed?ids=${g.surveyIds.join(",")}`,
             { headers: { Authorization: `Bearer ${token}` } },
           );
           return res.ok && (await res.json()) ? g.surveyIds[0] : null;
