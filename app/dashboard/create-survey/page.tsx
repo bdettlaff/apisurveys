@@ -47,7 +47,7 @@ export default function CreateSurveyPage() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    authFetch("${API_URL}/api/classes")
+    authFetch(`${API_URL}/api/classes`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setClasses(data))
       .catch(() => setClasses([]));

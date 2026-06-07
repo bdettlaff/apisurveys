@@ -36,7 +36,7 @@ export default function EditQuestionPage() {
       .then(setCategories)
       .catch(() => setCategories([]));
 
-    authFetch(`${API_URL}api/classes`)
+    authFetch(`${API_URL}/api/classes`)
       .then((r) => (r.ok ? r.json() : []))
       .then(setClasses)
       .catch(() => setClasses([]));
