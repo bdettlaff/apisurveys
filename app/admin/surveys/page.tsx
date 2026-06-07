@@ -5,6 +5,7 @@ import { Navbar } from "../../components/Navbar/Navbar";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
 import AdminGuard from "../../components/AdminGuard/AdminGuard";
+import { apiFetch } from '@/lib/api'
 
 interface ActiveSurvey {
   surveyId: number;
@@ -27,7 +28,7 @@ export default function ActiveSurveysPage() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    authFetch("http://localhost:8080/api/admin/surveys/active")
+    authFetch("/api/admin/surveys/active")
       .then((res) => {
         if (!res.ok) throw new Error("Nie udało się pobrać danych");
         return res.json();

@@ -6,6 +6,7 @@ import { loginRequest } from "@/authConfig";
 import { InteractionStatus } from "@azure/msal-browser";
 import { Logo } from "../Logo/Logo";
 import Link from "next/link";
+import { apiFetch } from '@/lib/api'
 
 type CurrentUser = {
   id: number;
@@ -42,7 +43,7 @@ export const Navbar = () => {
           account: accounts[0],
         });
 
-        const res = await fetch("http://localhost:8080/api/v1/me", {
+        const res = await fetch("/api/v1/me", {
           headers: {
             Authorization: `Bearer ${authResult.accessToken}`,
           },

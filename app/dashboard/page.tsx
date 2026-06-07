@@ -4,6 +4,7 @@ import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { Navbar } from "../components/Navbar/Navbar";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
+import { apiFetch } from '@/lib/api'
 
 type Survey = {
   surveyId: number;
@@ -204,7 +205,7 @@ export default function DashboardPage() {
       const promises = groups.map(async (g) => {
         try {
           const res = await fetch(
-            `http://localhost:8080/api/surveys/group/${g.surveyIds[0]}/is-completed?ids=${g.surveyIds.join(",")}`,
+            `${API_URL}/api/surveys/group/${g.surveyIds[0]}/is-completed?ids=${g.surveyIds.join(",")}`,
             { headers: { Authorization: `Bearer ${token}` } },
           );
           return res.ok && (await res.json()) ? g.surveyIds[0] : null;
@@ -238,7 +239,7 @@ export default function DashboardPage() {
       }
 
       const res = await fetch(
-        `http://localhost:8080/api/admin/surveys/active/by-code/${accessCode.trim().toUpperCase()}`,
+        `/api/admin/surveys/active/by-code/${accessCode.trim().toUpperCase()}`,
         { headers: { Authorization: `Bearer ${msalToken}` } },
       );
 

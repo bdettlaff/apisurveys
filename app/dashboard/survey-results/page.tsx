@@ -8,6 +8,7 @@ import { TeacherSelector } from "../../components/TeacherSelector/TeacherSelecto
 import { exportResultsToExcel } from "../../components/ExportToexcel/exportToExcel";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
+import { apiFetch } from '@/lib/api'
 
 export default function SurveyResultsPage() {
   const isAuthenticated = useIsAuthenticated();
@@ -35,12 +36,12 @@ export default function SurveyResultsPage() {
     };
 
     Promise.all([
-      authFetch("http://localhost:8080/api/results/all").then((r) => r.json()),
-      authFetch("http://localhost:8080/api/results/school").then(fetchSchool),
-      authFetch("http://localhost:8080/api/results/subjects-list").then((r) =>
+      authFetch("/api/results/all").then((r) => r.json()),
+      authFetch("/api/results/school").then(fetchSchool),
+      authFetch("/api/results/subjects-list").then((r) =>
         r.json(),
       ),
-      authFetch("http://localhost:8080/api/results/teachers-list").then((r) =>
+      authFetch("/api/results/teachers-list").then((r) =>
         r.json(),
       ),
     ])

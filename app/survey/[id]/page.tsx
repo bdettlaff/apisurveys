@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useMsal } from "@azure/msal-react";
 import { Navbar } from "../../components/Navbar/Navbar";
+import { apiFetch } from '@/lib/api'
 
 export default function FillSurveyPage() {
   const params = useParams();
@@ -38,7 +39,7 @@ export default function FillSurveyPage() {
       try {
         const token = await getAccessToken();
         const res = await fetch(
-          `http://localhost:8080/api/surveys/${id}/questions`,
+          `/api/surveys/${id}/questions`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         if (!res.ok) throw new Error(`Błąd API: ${res.status}`);
@@ -61,7 +62,7 @@ export default function FillSurveyPage() {
     try {
       const token = await getAccessToken();
       const response = await fetch(
-        `http://localhost:8080/api/surveys/${id}/submit`,
+        `/api/surveys/${id}/submit`,
         {
           method: "POST",
           headers: {

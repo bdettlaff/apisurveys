@@ -6,6 +6,7 @@ import { Navbar } from "../../components/Navbar/Navbar";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
 import AdminGuard from "../../components/AdminGuard/AdminGuard";
+import { apiFetch } from '@/lib/api'
 
 type Category = {
   id: number;
@@ -34,12 +35,12 @@ export default function QuestionsPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    authFetch("http://localhost:8080/api/questions")
+    authFetch("/api/questions")
       .then((res) => res.json())
       .then((data) => setQuestions(data))
       .catch((err) => console.error("Błąd pobierania pytań:", err));
 
-    authFetch("http://localhost:8080/api/categories")
+    authFetch("/api/categories")
       .then((res) => res.json())
       .then((data) => setCategories(data))
       .catch((err) => console.error("Błąd pobierania kategorii:", err));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from '@/lib/api'
 
 interface Teacher {
   id: number;
@@ -32,7 +33,7 @@ export default function SurveyForm({ classId }: { classId: number }) {
       setCompletedBlocks([]); 
       try {
         const res = await fetch(
-          `http://localhost:8080/api/classes/${classId}/blocks`,
+          `/api/classes/${classId}/blocks`,
         );
         const data = await res.json();
         setBlocks(data);

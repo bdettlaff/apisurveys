@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMsal } from "@azure/msal-react";
 import { Navbar } from "../../../components/Navbar/Navbar";
+import { apiFetch } from '@/lib/api'
 
 type QuestionDTO = {
   id: string;
@@ -126,7 +127,7 @@ export default function GroupSurveyPage() {
       try {
         const token = await getAccessToken();
         const res = await fetch(
-          `http://localhost:8080/api/surveys/group/${firstSurveyId}?ids=${surveyIds.join(",")}&code=${accessCode}`,
+          `/api/surveys/group/${firstSurveyId}?ids=${surveyIds.join(",")}&code=${accessCode}`,
           { headers: { Authorization: `Bearer ${token}` } },
         );
         if (!res.ok) throw new Error(`Błąd API: ${res.status}`);
@@ -148,7 +149,7 @@ export default function GroupSurveyPage() {
 
   useEffect(() => {
     if (!accessCode) return;
-    fetch(`http://localhost:8080/api/classes/subjects-by-code/${accessCode}`)
+    fetch(`/api/classes/subjects-by-code/${accessCode}`)
       .then((res) => (res.ok ? res.json() : []))
       .then((data: string[]) => setFetchedSubjects(data))
       .catch(() => setFetchedSubjects([]));
@@ -349,7 +350,7 @@ export default function GroupSurveyPage() {
         };
 
       const response = await fetch(
-        `http://localhost:8080/api/surveys/group/submit`,
+        `/api/surveys/group/submit`,
         {
           method: "POST",
           headers: {

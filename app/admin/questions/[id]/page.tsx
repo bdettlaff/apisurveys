@@ -6,6 +6,7 @@ import { Navbar } from "../../../components/Navbar/Navbar";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../../hooks/useAuthFetch";
 import AdminGuard from "../../../components/AdminGuard/AdminGuard";
+import { apiFetch } from '@/lib/api'
 
 type Category = { id: number; name: string };
 type SchoolClass = { id: number; name: string };
@@ -30,18 +31,18 @@ export default function EditQuestionPage() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    authFetch("http://localhost:8080/api/categories")
+    authFetch("/api/categories")
       .then((r) => (r.ok ? r.json() : []))
       .then(setCategories)
       .catch(() => setCategories([]));
 
-    authFetch("http://localhost:8080/api/classes")
+    authFetch("/api/classes")
       .then((r) => (r.ok ? r.json() : []))
       .then(setClasses)
       .catch(() => setClasses([]));
 
     if (id) {
-      authFetch(`http://localhost:8080/api/questions/${id}`)
+      authFetch(`/api/questions/${id}`)
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => {
           if (data && data.content !== undefined) {
@@ -66,7 +67,7 @@ export default function EditQuestionPage() {
     setIsSubmitting(true);
     try {
       const response = await authFetch(
-        `http://localhost:8080/api/questions/${id}`,
+        `/api/questions/${id}`,
         {
           method: "PUT",
           body: JSON.stringify({

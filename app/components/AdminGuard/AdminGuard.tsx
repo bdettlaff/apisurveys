@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMsal, useIsAuthenticated } from "@azure/msal-react";
 import { InteractionStatus } from "@azure/msal-browser";
 import { useRouter } from "next/navigation";
+import { apiFetch } from '@/lib/api'
 
 type CurrentUser = {
   id: number;
@@ -37,7 +38,7 @@ export default function AdminGuard({
           account: accounts[0],
         });
 
-        const res = await fetch("http://localhost:8080/api/v1/me", {
+        const res = await fetch("/api/v1/me", {
           headers: {
             Authorization: `Bearer ${authResult.accessToken}`,
           },

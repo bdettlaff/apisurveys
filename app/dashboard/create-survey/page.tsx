@@ -5,6 +5,7 @@ import { Navbar } from "../../components/Navbar/Navbar";
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
 import AdminGuard from "../../components/AdminGuard/AdminGuard";
+import { apiFetch } from '@/lib/api'
 
 type SchoolClass = { id: number; name: string };
 type Category = { id: number; name: string };
@@ -46,7 +47,7 @@ export default function CreateSurveyPage() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    authFetch("http://localhost:8080/api/classes")
+    authFetch("/api/classes")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => setClasses(data))
       .catch(() => setClasses([]));
@@ -59,7 +60,7 @@ export default function CreateSurveyPage() {
       setSelectedQuestionsPerBlock({});
       setGeneratedCode(null);
     } else {
-      authFetch(`http://localhost:8080/api/classes/${classId}/survey-blocks`)
+      authFetch(`/api/classes/${classId}/survey-blocks`)
         .then((res) => (res.ok ? res.json() : []))
         .then((data: SurveyBlock[]) => {
           setBlocks(data);
@@ -135,7 +136,7 @@ export default function CreateSurveyPage() {
 
     try {
       const response = await authFetch(
-        "http://localhost:8080/api/admin/surveys/composite",
+        "/api/admin/surveys/composite",
         {
           method: "POST",
           body: JSON.stringify({
