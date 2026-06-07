@@ -30,8 +30,6 @@ type TeacherGroup = {
   isSchoolSurvey: boolean;
 };
 
-// ── Licznik czasu sesji ───────────────────────────────────────────────────────
-
 function TokenCountdown({ tokenInfo }: { tokenInfo: TokenInfo }) {
   const [secondsLeft, setSecondsLeft] = useState<number>(() =>
     Math.max(
@@ -97,14 +95,17 @@ function TokenCountdown({ tokenInfo }: { tokenInfo: TokenInfo }) {
   );
 }
 
-// ── Główny komponent ──────────────────────────────────────────────────────────
-
 export default function DashboardPage() {
   const { accounts, instance } = useMsal();
   const isAuthenticated = useIsAuthenticated();
   const router = useRouter();
 
-  const [accessCode, setAccessCode] = useState<string>("");
+  const [accessCode, setAccessCode] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('dashboardAccessCode') || '';
+    }
+    return '';
+  });
   const [codeError, setCodeError] = useState<string | null>(null);
   const [className, setClassName] = useState<string | null>(null);
   const [activeSurveys, setActiveSurveys] = useState<Survey[]>([]);
@@ -223,7 +224,7 @@ export default function DashboardPage() {
     checkStatuses();
   }, [activeSurveys, getAccessToken]);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!accessCode.trim()) return;
     setCodeError(null);
     setIsSearching(true);
@@ -231,9 +232,7 @@ export default function DashboardPage() {
     try {
       const msalToken = await getAccessToken();
       if (!msalToken) {
-        setCodeError(
-          "Nie udało się pobrać tokena autoryzacji. Zaloguj się ponownie.",
-        );
+        setCodeError("Nie udało się pobrać tokena autoryzacji. Zaloguj się ponownie.");
         setIsSearching(false);
         return;
       }
@@ -244,9 +243,7 @@ export default function DashboardPage() {
       );
 
       if (!res.ok) {
-        setCodeError(
-          "Nie znaleziono klasy o tym kodzie. Sprawdź kod i spróbuj ponownie.",
-        );
+        setCodeError("Nie znaleziono klasy o tym kodzie. Sprawdź kod i spróbuj ponownie.");
         setActiveSurveys([]);
         setClassName(null);
         setTokenInfo(null);
@@ -254,21 +251,23 @@ export default function DashboardPage() {
         return;
       }
 
-      // Backend zwraca: { surveys: [...], tokenInfo: { firstUsedAt, expiresAt, expired } }
-      const data: { surveys: Survey[]; tokenInfo: TokenInfo } =
-        await res.json();
-
+      const data: { surveys: Survey[]; tokenInfo: TokenInfo } = await res.json();
       setActiveSurveys(data.surveys);
       setTokenInfo(data.tokenInfo);
-      setClassName(
-        data.surveys.length > 0 ? data.surveys[0].targetClass : accessCode,
-      );
+      setClassName(data.surveys.length > 0 ? data.surveys[0].targetClass : accessCode);
     } catch {
       setCodeError("Błąd połączenia z serwerem.");
     }
 
     setIsSearching(false);
-  };
+  }, [accessCode, getAccessToken]);
+
+  // Auto-wyszukaj po powrocie jeśli kod jest zapisany
+  useEffect(() => {
+    if (isAuthenticated && accessCode && activeSurveys.length === 0) {
+      handleSearch();
+    }
+  }, [isAuthenticated]);
 
   const allGroups = groupSurveys(activeSurveys);
 
@@ -283,7 +282,6 @@ export default function DashboardPage() {
             Witaj, {accounts[0]?.name}!
           </h1>
 
-          {/* Pole kodu */}
           <div className="mb-8">
             <label className="block text-xs font-bold text-zinc-400 uppercase mb-2">
               Wpisz kod swojej klasy:
@@ -293,7 +291,9 @@ export default function DashboardPage() {
                 type="text"
                 value={accessCode}
                 onChange={(e) => {
-                  setAccessCode(e.target.value.toUpperCase());
+                  const val = e.target.value.toUpperCase();
+                  setAccessCode(val);
+                  sessionStorage.setItem('dashboardAccessCode', val);
                   setCodeError(null);
                 }}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -309,32 +309,24 @@ export default function DashboardPage() {
               </button>
             </div>
             {codeError && (
-              <p className="text-red-500 text-xs mt-2 font-medium">
-                {codeError}
-              </p>
+              <p className="text-red-500 text-xs mt-2 font-medium">{codeError}</p>
             )}
           </div>
 
-          {/* Lista ankiet */}
           {className !== null && (
             <div className="border-t pt-8">
               <h2 className="font-bold text-lg mb-4 text-zinc-800">
                 Ankiety dla klasy {className}:
               </h2>
 
-              {/* Licznik sesji */}
               {tokenInfo && <TokenCountdown tokenInfo={tokenInfo} />}
 
               {isLoadingStatuses ? (
-                <p className="text-zinc-400 text-sm italic">
-                  Sprawdzanie statusu ankiet...
-                </p>
+                <p className="text-zinc-400 text-sm italic">Sprawdzanie statusu ankiet...</p>
               ) : allGroups.length > 0 ? (
                 <div className="grid gap-4">
                   {allGroups.map((group) => {
-                    const isCompleted = completedGroups.includes(
-                      group.surveyIds[0],
-                    );
+                    const isCompleted = completedGroups.includes(group.surveyIds[0]);
 
                     return (
                       <div
@@ -352,14 +344,10 @@ export default function DashboardPage() {
                                 Szkoła
                               </span>
                             )}
-                            <p className="font-bold text-sm text-zinc-800">
-                              {group.teacherName}
-                            </p>
+                            <p className="font-bold text-sm text-zinc-800">{group.teacherName}</p>
                           </div>
                           {group.subjects.length > 0 && (
-                            <p className="text-xs text-zinc-500 mt-0.5">
-                              {group.subjects.join(", ")}
-                            </p>
+                            <p className="text-xs text-zinc-500 mt-0.5">{group.subjects.join(", ")}</p>
                           )}
                           <p className="text-[10px] text-zinc-400 font-bold uppercase mt-1">
                             {group.startDate} – {group.endDate}
@@ -371,7 +359,7 @@ export default function DashboardPage() {
                             ✓ Wysłano
                           </div>
                         ) : (
-                          <a
+
                             href={`/survey/group/${group.surveyIds[0]}?code=${accessCode}&ids=${group.surveyIds.join(",")}`}
                             className={`px-4 py-2 text-white rounded-lg text-sm font-bold transition-colors whitespace-nowrap ${
                               group.isSchoolSurvey
@@ -387,9 +375,7 @@ export default function DashboardPage() {
                   })}
                 </div>
               ) : (
-                <p className="text-zinc-500 italic text-sm">
-                  Brak aktywnych ankiet dla tej klasy.
-                </p>
+                <p className="text-zinc-500 italic text-sm">Brak aktywnych ankiet dla tej klasy.</p>
               )}
             </div>
           )}
