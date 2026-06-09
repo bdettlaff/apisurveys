@@ -480,7 +480,7 @@ useEffect(() => {
             />
           ) : (
             <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((r) => (
+              {[1, 2, 3, 4, 5].map((r) => (
                 <button
                   key={r}
                   onClick={() => onAnswer(r)}
@@ -536,7 +536,7 @@ useEffect(() => {
                   <div key={j} className="pb-6 mb-4 border-b border-zinc-100">
                     <div className="h-4 w-3/4 bg-zinc-200 rounded mb-4" />
                     <div className="flex gap-2">
-                      {[...Array(10)].map((_, k) => (
+                      {[...Array(5)].map((_, k) => (
                         <div
                           key={k}
                           className="w-9 h-9 rounded-full bg-zinc-100"
@@ -614,7 +614,7 @@ useEffect(() => {
             {group.targetClass}
           </p>
           <p className="text-center text-xs text-zinc-400 mb-1">
-            Skala 1–10 (1 = zdecydowanie nie, 10 = zdecydowanie tak)
+            Skala 1–5 (1 = zdecydowanie nie, 5 = zdecydowanie tak)
           </p>
           <p className="text-center text-xs text-zinc-300 mb-8">
             Ankieta aktywna do{" "}
