@@ -30,24 +30,44 @@ export default function SurveyResultsPage() {
 
 const handlePrint = async () => {
   const element = document.getElementById("pdf-content");
-    if (!element) return;
+  if (!element) return;
 
-    const dataUrl = await toPng(element, { pixelRatio: 2 });
+  // Znajdź i rozwiń wszystkie scrollowalne elementy
+  const scrollables = element.querySelectorAll<HTMLElement>(
+    ".overflow-y-auto, .overflow-y-scroll, .overflow-auto, .overflow-scroll"
+  );
+  const originalStyles: { el: HTMLElement; overflow: string; height: string; maxHeight: string }[] = [];
 
-    const pdf = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4",
+  scrollables.forEach((el) => {
+    originalStyles.push({
+      el,
+      overflow: el.style.overflow,
+      height: el.style.height,
+      maxHeight: el.style.maxHeight,
     });
+    el.style.overflow = "visible";
+    el.style.height = "auto";
+    el.style.maxHeight = "none";
+  });
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const img = new Image();
-    img.src = dataUrl;
-    await new Promise((resolve) => (img.onload = resolve));
-    const pdfHeight = (img.height * pdfWidth) / img.width;
+  const dataUrl = await toPng(element, { pixelRatio: 2 });
 
-    pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
-    pdf.save("wyniki-ankiety.pdf");
+  // Przywróć oryginalne style
+  originalStyles.forEach(({ el, overflow, height, maxHeight }) => {
+    el.style.overflow = overflow;
+    el.style.height = height;
+    el.style.maxHeight = maxHeight;
+  });
+
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const img = new Image();
+  img.src = dataUrl;
+  await new Promise((resolve) => (img.onload = resolve));
+  const pdfHeight = (img.height * pdfWidth) / img.width;
+
+  pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+  pdf.save("wyniki-ankiety.pdf");
 };
 
 
