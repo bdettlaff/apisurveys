@@ -188,7 +188,7 @@ export default function SurveyResultsPage() {
                 Średnia ogólna
               </span>
               <span className="text-sm font-black">
-                {overallAvg.toFixed(2)} / 10
+                {overallAvg.toFixed(2)} / 5
               </span>
             </div>
           )}
@@ -249,7 +249,7 @@ export default function SurveyResultsPage() {
                 Średnia ogólna
               </span>
               <span className="text-sm font-black">
-                {overallAvg.toFixed(2)} / 10
+                {overallAvg.toFixed(2)} / 5
               </span>
             </div>
           )}
