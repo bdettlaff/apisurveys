@@ -25,6 +25,15 @@
     print-color-adjust: exact !important;
   }
 
+    .overflow-y-auto,
+    .overflow-y-scroll,
+    .overflow-auto,
+    .overflow-scroll {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
+    }
+
   body {
     background: white;
   }
