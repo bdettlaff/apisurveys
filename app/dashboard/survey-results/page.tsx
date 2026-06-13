@@ -29,8 +29,7 @@ export default function SurveyResultsPage() {
   const [selectedClass, setSelectedClass] = useState("Wszystkie klasy");
 
 const handlePrint = async () => {
-  Tak, trzeba podzielić obraz na strony A4. Oto zaktualizowany handler:
-  tsxconst handlePrint = async () => {
+    handlePrint = async () => {
     const element = document.getElementById("pdf-content");
     if (!element) return;
 
