@@ -60,11 +60,17 @@ export function TeacherSelector({
           style={selectStyle}
         >
           <option value="all">Wszyscy nauczyciele</option>
-          {teachers.map((teacher) => (
-            <option key={teacher.teacherId} value={teacher.teacherId}>
-              {teacher.teacherName}
-            </option>
-          ))}
+            {teachers
+              .slice()
+              .sort((a, b) => {
+                const lastName = (name) => name.trim().split(' ').at(-1);
+                return lastName(a.teacherName).localeCompare(lastName(b.teacherName), 'pl');
+              })
+              .map((teacher) => (
+                <option key={teacher.teacherId} value={teacher.teacherId}>
+                  {teacher.teacherName}
+                </option>
+              ))}
         </select>
       </div>
     </div>
