@@ -29,54 +29,68 @@ export default function SurveyResultsPage() {
   const [selectedClass, setSelectedClass] = useState("Wszystkie klasy");
 
 const handlePrint = async () => {
-  const element = document.getElementById("pdf-content");
-  if (!element) return;
+  Tak, trzeba podzielić obraz na strony A4. Oto zaktualizowany handler:
+  tsxconst handlePrint = async () => {
+    const element = document.getElementById("pdf-content");
+    if (!element) return;
 
-  const scrollables = element.querySelectorAll<HTMLElement>(
-    ".overflow-y-auto, .overflow-y-scroll, .overflow-auto, .overflow-scroll"
-  );
-  const originalStyles: { el: HTMLElement; overflow: string; height: string; maxHeight: string }[] = [];
+    const scrollables = element.querySelectorAll<HTMLElement>(
+      ".overflow-y-auto, .overflow-y-scroll, .overflow-auto, .overflow-scroll"
+    );
+    const originalStyles: { el: HTMLElement; overflow: string; height: string; maxHeight: string }[] = [];
 
-  scrollables.forEach((el) => {
-    originalStyles.push({
-      el,
-      overflow: el.style.overflow,
-      height: el.style.height,
-      maxHeight: el.style.maxHeight,
+    scrollables.forEach((el) => {
+      originalStyles.push({
+        el,
+        overflow: el.style.overflow,
+        height: el.style.height,
+        maxHeight: el.style.maxHeight,
+      });
+      el.style.overflow = "visible";
+      el.style.height = "auto";
+      el.style.maxHeight = "none";
     });
-    el.style.overflow = "visible";
-    el.style.height = "auto";
-    el.style.maxHeight = "none";
-  });
 
-  // Poczekaj chwilę żeby DOM się przerenderował
-  await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const dataUrl = await toPng(element, {
-    pixelRatio: 2,
-    width: element.scrollWidth,
-    height: element.scrollHeight,
-    style: {
-      width: element.scrollWidth + "px",
-      height: element.scrollHeight + "px",
-    },
-  });
+    const dataUrl = await toPng(element, {
+      pixelRatio: 2,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
+      style: {
+        width: element.scrollWidth + "px",
+        height: element.scrollHeight + "px",
+      },
+    });
 
-  originalStyles.forEach(({ el, overflow, height, maxHeight }) => {
-    el.style.overflow = overflow;
-    el.style.height = height;
-    el.style.maxHeight = maxHeight;
-  });
+    originalStyles.forEach(({ el, overflow, height, maxHeight }) => {
+      el.style.overflow = overflow;
+      el.style.height = height;
+      el.style.maxHeight = maxHeight;
+    });
 
-  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const img = new Image();
-  img.src = dataUrl;
-  await new Promise((resolve) => (img.onload = resolve));
-  const pdfHeight = (img.height * pdfWidth) / img.width;
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise((resolve) => (img.onload = resolve));
 
-  pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
-  pdf.save("wyniki-ankiety.pdf");
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+
+    const pageWidth = pdf.internal.pageSize.getWidth();   // 297mm
+    const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
+
+    const imgWidthMm = pageWidth;
+    const imgHeightMm = (img.height * imgWidthMm) / img.width;
+
+    let yOffset = 0;
+
+    while (yOffset < imgHeightMm) {
+      if (yOffset > 0) pdf.addPage();
+
+      pdf.addImage(dataUrl, "PNG", 0, -yOffset, imgWidthMm, imgHeightMm);
+      yOffset += pageHeight;
+    }
+
+    pdf.save("wyniki-ankiety.pdf");
 };
 
 
