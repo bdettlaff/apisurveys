@@ -63,7 +63,7 @@ export function TeacherSelector({
             {teachers
               .slice()
               .sort((a, b) => {
-                const lastName = (name) => name.trim().split(' ').at(-1);
+                const lastName = (name: string) => name.trim().split(' ').at(-1);
                 return lastName(a.teacherName).localeCompare(lastName(b.teacherName), 'pl');
               })
               .map((teacher) => (
