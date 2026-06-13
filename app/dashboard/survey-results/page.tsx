@@ -9,6 +9,8 @@ import { exportResultsToExcel } from "../../components/ExportToexcel/exportToExc
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
 import { API_URL } from '@/lib/api'
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 
 export default function SurveyResultsPage() {
   const isAuthenticated = useIsAuthenticated();
@@ -26,6 +28,31 @@ export default function SurveyResultsPage() {
   );
   const [selectedTeacherId, setSelectedTeacherId] = useState("all");
   const [selectedClass, setSelectedClass] = useState("Wszystkie klasy");
+
+const handlePrint = async () => {
+  const element = document.getElementById("pdf-content");
+  if (!element) return;
+
+  const canvas = await html2canvas(element, {
+    scale: 2,
+    useCORS: true,
+    allowTaint: true,
+  });
+
+  const imgData = canvas.toDataURL("image/png");
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: "a4",
+  });
+
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+  pdf.save("wyniki-ankiety.pdf");
+    };
+
 
   useEffect(() => {
     if (!isAuthenticated) return; // ← czekaj aż użytkownik będzie zalogowany
@@ -291,6 +318,7 @@ export default function SurveyResultsPage() {
     (schoolData && (schoolData.totalVotes ?? 0) > 0);
 
   return (
+      <div id="pdf-content">
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-900 pt-28 pb-12">
       <Navbar />
       <div className="p-6 max-w-7xl mx-auto space-y-8">
@@ -430,6 +458,7 @@ export default function SurveyResultsPage() {
           </div>
         )}
       </div>
+    </div>
     </div>
   );
 }
