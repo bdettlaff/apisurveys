@@ -28,35 +28,27 @@ export default function SurveyResultsPage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState("all");
   const [selectedClass, setSelectedClass] = useState("Wszystkie klasy");
 
-
 const handlePrint = async () => {
   const element = document.getElementById("pdf-content");
-  if (!element) return;
+    if (!element) return;
 
-  const dataUrl = await toPng(element, { pixelRatio: 2 });
+    const dataUrl = await toPng(element, { pixelRatio: 2 });
 
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "mm",
-    format: "a4",
-  });
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
 
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const img = new Image();
-  img.src = dataUrl;
-  await new Promise((resolve) => (img.onload = resolve));
-  const pdfHeight = (img.height * pdfWidth) / img.width;
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise((resolve) => (img.onload = resolve));
+    const pdfHeight = (img.height * pdfWidth) / img.width;
 
-  pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
-  pdf.save("wyniki-ankiety.pdf");
+    pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+    pdf.save("wyniki-ankiety.pdf");
 };
-
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-  pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
-  pdf.save("wyniki-ankiety.pdf");
-    };
 
 
   useEffect(() => {
