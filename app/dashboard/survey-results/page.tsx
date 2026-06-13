@@ -9,7 +9,7 @@ import { exportResultsToExcel } from "../../components/ExportToexcel/exportToExc
 import { useIsAuthenticated } from "@azure/msal-react";
 import { useAuthFetch } from "../../hooks/useAuthFetch";
 import { API_URL } from '@/lib/api'
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 import jsPDF from "jspdf";
 
 export default function SurveyResultsPage() {
@@ -28,22 +28,28 @@ export default function SurveyResultsPage() {
   const [selectedTeacherId, setSelectedTeacherId] = useState("all");
   const [selectedClass, setSelectedClass] = useState("Wszystkie klasy");
 
+
 const handlePrint = async () => {
   const element = document.getElementById("pdf-content");
   if (!element) return;
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    allowTaint: true,
-  });
+  const dataUrl = await toPng(element, { pixelRatio: 2 });
 
-  const imgData = canvas.toDataURL("image/png");
   const pdf = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4",
   });
+
+  const pdfWidth = pdf.internal.pageSize.getWidth();
+  const img = new Image();
+  img.src = dataUrl;
+  await new Promise((resolve) => (img.onload = resolve));
+  const pdfHeight = (img.height * pdfWidth) / img.width;
+
+  pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+  pdf.save("wyniki-ankiety.pdf");
+};
 
   const pdfWidth = pdf.internal.pageSize.getWidth();
   const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
