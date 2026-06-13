@@ -32,7 +32,6 @@ const handlePrint = async () => {
   const element = document.getElementById("pdf-content");
   if (!element) return;
 
-  // Znajdź i rozwiń wszystkie scrollowalne elementy
   const scrollables = element.querySelectorAll<HTMLElement>(
     ".overflow-y-auto, .overflow-y-scroll, .overflow-auto, .overflow-scroll"
   );
@@ -50,9 +49,19 @@ const handlePrint = async () => {
     el.style.maxHeight = "none";
   });
 
-  const dataUrl = await toPng(element, { pixelRatio: 2 });
+  // Poczekaj chwilę żeby DOM się przerenderował
+  await new Promise((resolve) => setTimeout(resolve, 100));
 
-  // Przywróć oryginalne style
+  const dataUrl = await toPng(element, {
+    pixelRatio: 2,
+    width: element.scrollWidth,
+    height: element.scrollHeight,
+    style: {
+      width: element.scrollWidth + "px",
+      height: element.scrollHeight + "px",
+    },
+  });
+
   originalStyles.forEach(({ el, overflow, height, maxHeight }) => {
     el.style.overflow = overflow;
     el.style.height = height;
