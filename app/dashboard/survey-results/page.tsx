@@ -21,7 +21,6 @@ export default function SurveyResultsPage() {
   const [subjects, setSubjects] = useState<string[]>(["Wszystkie przedmioty"]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [isExporting, setIsExporting] = useState(false);
-  const handlePrint = () => window.print();
 
   const [selectedSubject, setSelectedSubject] = useState(
     "Wszystkie przedmioty",
