@@ -15,9 +15,9 @@ interface StatsProps {
 
 // kolory: zielony / indygo / bursztynowy / czerwony (skala 1-10)
 function getColor(avg: number) {
-  if (avg >= 8) return { bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" };
-  if (avg >= 6) return { bar: "bg-indigo-600", text: "text-indigo-600 dark:text-indigo-400" };
-  if (avg >= 4) return { bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400" };
+  if (avg >= 4) return { bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" };
+  if (avg >= 3) return { bar: "bg-indigo-600", text: "text-indigo-600 dark:text-indigo-400" };
+  if (avg >= 2) return { bar: "bg-amber-500", text: "text-amber-600 dark:text-amber-400" };
   return { bar: "bg-rose-500", text: "text-rose-600 dark:text-rose-400" };
 }
 
@@ -49,7 +49,7 @@ export function StatsChart({ stats, totalVotes, questionTexts = {} }: StatsProps
         .map(([key, item]) => {
           const cleanKey = key.replace("avg", "");
           const questionText = questionTexts[cleanKey] || item.label;
-          const scale = Math.min(item.avg / 10, 1);
+          const scale = Math.min(item.avg / 5, 1);
           const barId = `bar_${baseId}_${key}`;
           const color = getColor(item.avg);
 
@@ -77,7 +77,7 @@ export function StatsChart({ stats, totalVotes, questionTexts = {} }: StatsProps
                   </span>
                 </div>
                 <span className={`text-sm font-black shrink-0 ${color.text}`}>
-                  {item.avg.toFixed(2)} / 10.00
+                  {item.avg.toFixed(2)} / 5.00
                 </span>
               </div>
 
