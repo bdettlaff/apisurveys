@@ -377,10 +377,10 @@ export default function SurveyResultsPage() {
                 </>
               )}
             </button>
-            <button onClick={handlePrint}>
-              Eksportuj PDF
-            </button>
           )}
+                  <button onClick={handlePrint}>
+                    Eksportuj PDF
+                  </button>
         </div>
 
         {showSchool && (
