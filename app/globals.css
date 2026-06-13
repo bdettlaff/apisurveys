@@ -14,3 +14,17 @@
   --color-brand-primary: var(--color-alo-red);
   --color-brand-secondary: var(--color-tau-yellow);
 }
+
+@media print {
+  button, nav, header, .no-print {
+    display: none !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    background: white;
+  }
+}

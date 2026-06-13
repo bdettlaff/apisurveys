@@ -376,6 +376,9 @@ export default function SurveyResultsPage() {
                 </>
               )}
             </button>
+            <button onClick={() => window.print()}>
+              Eksportuj PDF
+            </button>
           )}
         </div>
 
