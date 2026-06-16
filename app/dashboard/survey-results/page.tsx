@@ -96,7 +96,7 @@ const handlePrint = async () => {
       ? `${teacher.firstName} ${teacher.lastName}`
       : "Wszyscy nauczyciele";
     const className = selectedClass === "Wszystkie klasy" ? "wszystkie-klasy" : selectedClass;
-    const fileName = `${teacherName} - ${selectedSubject} - ${className}.pdf`;
+    const fileName = `${teacherName} - ${className}.pdf`;
 
     pdf.save(fileName);
   setIsExportingPdf(false);
