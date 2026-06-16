@@ -53,6 +53,7 @@ const handlePrint = async () => {
       el.style.height = "auto";
       el.style.maxHeight = "none";
     });
+    element.style.background = "white";
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -65,7 +66,7 @@ const handlePrint = async () => {
         height: element.scrollHeight + "px",
       },
     });
-
+    element.style.background = "";
     originalStyles.forEach(({ el, overflow, height, maxHeight }) => {
       el.style.overflow = overflow;
       el.style.height = height;
