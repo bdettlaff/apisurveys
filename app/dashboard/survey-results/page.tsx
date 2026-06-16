@@ -375,9 +375,9 @@ const handlePrint = async () => {
     (schoolData && (schoolData.totalVotes ?? 0) > 0);
 
   return (
-      <div id="pdf-content">
     <div className="min-h-screen bg-zinc-50/50 dark:bg-zinc-900 pt-28 pb-12">
       <Navbar />
+      <div id="pdf-content">
       <div className="p-6 max-w-7xl mx-auto space-y-8">
         <div className="flex flex-wrap gap-4 items-end justify-between">
           <div className="flex flex-wrap gap-4 items-end">
