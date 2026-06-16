@@ -34,62 +34,68 @@ const handlePrint = async () => {
   if (!element) return;
 
   setIsExportingPdf(true);
+  await new Promise((resolve) => setTimeout(resolve, 50));
 
-  const scrollables = element.querySelectorAll<HTMLElement>(
-    ".overflow-y-auto, .overflow-y-scroll, .overflow-auto, .overflow-scroll"
-  );
-  const originalStyles: { el: HTMLElement; overflow: string; height: string; maxHeight: string }[] = [];
+  try {
+    const scrollables = element.querySelectorAll<HTMLElement>(
+      ".overflow-y-auto, .overflow-y-scroll, .overflow-auto, .overflow-scroll"
+    );
+    const originalStyles: { el: HTMLElement; overflow: string; height: string; maxHeight: string }[] = [];
 
-  scrollables.forEach((el) => {
-    originalStyles.push({
-      el,
-      overflow: el.style.overflow,
-      height: el.style.height,
-      maxHeight: el.style.maxHeight,
+    scrollables.forEach((el) => {
+      originalStyles.push({
+        el,
+        overflow: el.style.overflow,
+        height: el.style.height,
+        maxHeight: el.style.maxHeight,
+      });
+      el.style.overflow = "visible";
+      el.style.height = "auto";
+      el.style.maxHeight = "none";
     });
-    el.style.overflow = "visible";
-    el.style.height = "auto";
-    el.style.maxHeight = "none";
-  });
 
-  await new Promise((resolve) => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
-  const dataUrl = await toPng(element, {
-    pixelRatio: 2,
-    width: element.scrollWidth,
-    height: element.scrollHeight,
-    style: {
-      width: element.scrollWidth + "px",
-      height: element.scrollHeight + "px",
-    },
-  });
+    const dataUrl = await toPng(element, {
+      pixelRatio: 1.5,
+      width: element.scrollWidth,
+      height: element.scrollHeight,
+      style: {
+        width: element.scrollWidth + "px",
+        height: element.scrollHeight + "px",
+      },
+    });
 
-  originalStyles.forEach(({ el, overflow, height, maxHeight }) => {
-    el.style.overflow = overflow;
-    el.style.height = height;
-    el.style.maxHeight = maxHeight;
-  });
+    originalStyles.forEach(({ el, overflow, height, maxHeight }) => {
+      el.style.overflow = overflow;
+      el.style.height = height;
+      el.style.maxHeight = maxHeight;
+    });
 
-  const img = new Image();
-  img.src = dataUrl;
-  await new Promise((resolve) => (img.onload = resolve));
+    const img = new Image();
+    img.src = dataUrl;
+    await new Promise((resolve) => (img.onload = resolve));
 
-  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    // Konwertuj do JPEG dla mniejszego rozmiaru
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d")!;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    const jpegUrl = canvas.toDataURL("image/jpeg", 0.85);
 
-  const pageWidth = pdf.internal.pageSize.getWidth();   // 297mm
-  const pageHeight = pdf.internal.pageSize.getHeight(); // 210mm
+    const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgWidthMm = pageWidth;
+    const imgHeightMm = (img.height * imgWidthMm) / img.width;
 
-  const imgWidthMm = pageWidth;
-  const imgHeightMm = (img.height * imgWidthMm) / img.width;
-
-  let yOffset = 0;
-
-  while (yOffset < imgHeightMm) {
-    if (yOffset > 0) pdf.addPage();
-
-    pdf.addImage(dataUrl, "PNG", 0, -yOffset, imgWidthMm, imgHeightMm);
-    yOffset += pageHeight;
-  }
+    let yOffset = 0;
+    while (yOffset < imgHeightMm) {
+      if (yOffset > 0) pdf.addPage();
+      pdf.addImage(jpegUrl, "JPEG", 0, -yOffset, imgWidthMm, imgHeightMm);
+      yOffset += pageHeight;
+    }
 
     const teacher = teachers.find((t) => String(t.id) === selectedTeacherId);
     const teacherName = teacher
@@ -99,7 +105,9 @@ const handlePrint = async () => {
     const fileName = `${teacherName} - ${className}.pdf`;
 
     pdf.save(fileName);
-  setIsExportingPdf(false);
+  } finally {
+    setIsExportingPdf(false);
+  }
 };
 
 
