@@ -91,7 +91,14 @@ const handlePrint = async () => {
     yOffset += pageHeight;
   }
 
-  pdf.save("wyniki-ankiety.pdf");
+    const teacher = teachers.find((t) => String(t.id) === selectedTeacherId);
+    const teacherName = teacher
+      ? `${teacher.firstName} ${teacher.lastName}`
+      : "Wszyscy nauczyciele";
+    const className = selectedClass === "Wszystkie klasy" ? "wszystkie-klasy" : selectedClass;
+    const fileName = `${teacherName} - ${selectedSubject} - ${className}.pdf`;
+
+    pdf.save(fileName);
   setIsExportingPdf(false);
 };
 
